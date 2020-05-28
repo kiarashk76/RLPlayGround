@@ -1,6 +1,7 @@
 from Test.Experiments.BaseExperiment import BaseExperiment
 from Test.Envs.GridWorldBase import GridWorld
 from Test.Agents.SemiGradTDAgent2 import SemiGradientTD
+from Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -148,9 +149,10 @@ if __name__ == '__main__':
                             }
 
     env = GridWorld(params=empty_room_params_10d)
-    agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
+    reward_function = None
+    agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
                             'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-                            'batch_size': 1,})
+                            'batch_size': 1, 'reward_function': reward_function})
     experiment = GridWorldExperiment(agent, env)
 
 

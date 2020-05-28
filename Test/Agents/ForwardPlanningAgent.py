@@ -49,7 +49,7 @@ class ForwardPlannerAgent(BaseAgent):
             nn_state_shape = (self.batch_size,) + self.prev_state.shape
             self.state_transition_model = []
             for i in range(len(self.action_list)):
-                self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+                self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.model_layers_type, self.model_layers_features))
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
@@ -86,6 +86,8 @@ class ForwardPlannerAgent(BaseAgent):
         self.prev_state = self.state
         self.prev_action = self.action
 
+
+        self.trainModel(self.prev_state, self.prev_action, self.state)
         self.planForward()
 
         self.writer.add_scalar('loss', loss.item())
@@ -126,10 +128,10 @@ class ForwardPlannerAgent(BaseAgent):
     def agentState(self, observation):
         return np.copy(observation)
 
-    def updateWeights(self, action):
-        for f in self.q_value_function[action].parameters():
+    def updateWeights(self, action_index):
+        for f in self.q_value_function[action_index].parameters():
             f.data.sub_(self.step_size * f.grad.data)
-        self.q_value_function[action].zero_grad()
+        self.q_value_function[action_index].zero_grad()
 
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
@@ -150,8 +152,11 @@ class ForwardPlannerAgent(BaseAgent):
                 next_action_index = self.getActionIndex(next_action)
                 x_old = torch.from_numpy(state).unsqueeze(0)
                 x_new = torch.from_numpy(next_state).unsqueeze(0)
+                is_terminal = next_state == self.goal
                 reward = self.reward_function(next_state)
-                target = reward + self.gamma * self.q_value_function[next_action_index](x_new).detach()
+                target = reward
+                if not is_terminal:
+                    target += self.gamma * self.q_value_function[next_action_index](x_new).detach()
                 action_index = self.getActionIndex(action)
 
                 input = self.q_value_function[action_index](x_old)
@@ -159,6 +164,8 @@ class ForwardPlannerAgent(BaseAgent):
 
                 loss.backward()
                 self.updateWeights(action_index)
+                if is_terminal:
+                    break
 
                 state = next_state
                 action = next_action
@@ -168,6 +175,17 @@ class ForwardPlannerAgent(BaseAgent):
         action = self.action_list[int(np.random.rand() * self.num_actions)]
         return action
 
+    def trainModel(self, state, action, next_state):
+        x_old = torch.from_numpy(state).unsqueeze(0)
+        x_new = torch.from_numpy(next_state).unsqueeze(0)
+        action_index = self.getActionIndex(action)
+        input = self.state_transition_model[action_index](x_old)
+        target = x_new
+        loss = nn.MSELoss()(input, target)
+        loss.backward()
+        self.updateModelWeights(action_index)
 
-
-
+    def updateModelWeights(self, action_index):
+        for f in self.state_transition_model[action_index].parameters():
+            f.data.sub_(self.step_size * f.grad.data)
+        self.state_transition_model[action_index].zero_grad()
