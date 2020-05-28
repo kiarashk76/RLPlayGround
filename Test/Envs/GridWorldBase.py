@@ -223,6 +223,43 @@ class GridWorld():
             return next_pos
         return pos
 
+    def posToState(self, pos, state_type):
+        if self._grid is None:
+            raise NotImplementedError("grid is not defined")
+
+        if state_type == 'full_obs':
+            grid = self._grid.copy()
+            grid[self._agent_pos] = self._ground_color
+            grid[pos] = self._agent_color
+
+        elif state_type == 'nei_obs':
+            raise NotImplementedError("neighbouring observation is not implemented")
+
+    def stateToPos(self, state, state_type):
+        if self._grid is None:
+            raise NotImplementedError("grid is not defined")
+
+        if state_type == 'full_obs':
+            for i in range(state.shape[0]):
+                for j in range(state.shape[1]):
+                    if state[i,j] == self._agent_color:
+                        pos = i,j
+                        return pos
+
+        elif state_type == 'nei_obs':
+            raise NotImplementedError("neighbouring observation is not implemented")
+
+    def rewardFunction(self, state, state_type= 'full_obs'):
+        pos = self.stateToPos(state, state_type=state_type)
+        reward = self.__rewardFunction(pos)
+        return reward
+
+    def transitionFunction(self, state, action, state_type= 'full_obs'):
+        pos = self.stateToPos(state, state_type)
+        pos = self.__transitionFunction(pos, action)
+        next_state = self.posToState(pos, state_type)
+        return next_state
+
     def render(self, grid= None):
         if grid == None:
             grid = self._grid
