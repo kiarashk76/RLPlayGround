@@ -24,7 +24,7 @@ class GridWorldExperiment(BaseExperiment):
         (reward, s, term) = self.environment.step(self.last_action)
         obs = self.observationChannel(s)
         self.total_reward += reward
-        if self._render_on and self.num_episodes > 4999:
+        if self._render_on and self.num_episodes > 0:
             self.environment.render()
         if term:
             self.agent.end(reward)
@@ -38,11 +38,6 @@ class GridWorldExperiment(BaseExperiment):
         return roat
 
     def runEpisode(self, max_steps=0):
-        if self.num_episodes > 300:
-            self.agent.greedy = True
-            if self.num_steps > 100:
-                print("hi")
-                pass
             # printing each state action value
             # for state, coord in zip(env.getAllStates(state_type= 'full_obs'),
             #                         env.getAllStates(state_type= 'coord')):
@@ -140,7 +135,19 @@ if __name__ == '__main__':
                          'aging_reward': -1
                          }
 
-    env = GridWorld(params=empty_room_params_3d)
+    empty_room_params_10d = {'size': (10, 10), 'init_state': (9, 0), 'state_mode': 'full_obs',
+                            'obstacles_pos': [],
+                            'rewards_pos': [(0, 9)], 'rewards_value': [10],
+                            'terminals_pos': [(0, 9)], 'termination_probs': [1],
+                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)],
+                            'neighbour_distance': 0,
+                            'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
+                            'transition_randomness': 0.0,
+                            'window_size': (255, 255),
+                            'aging_reward': -1
+                            }
+
+    env = GridWorld(params=empty_room_params_10d)
     agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
                             'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
                             'batch_size': 1,})
@@ -149,7 +156,7 @@ if __name__ == '__main__':
 
 
     # print(env.getAllStates())
-    for i in range(500):
+    for i in range(100):
         print("starting episode ", i+1)
         experiment.runEpisode(200)
     experiment.draw_num_steps()
