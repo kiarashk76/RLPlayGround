@@ -1,3 +1,9 @@
+from GridWorldBase import GridWorld
+from RandomAgent import RandomAgent
+import numpy as np
+
+import pygame
+
 class BaseExperiment:
     def __init__(self, agent, env):
         self.environment = env
@@ -9,6 +15,7 @@ class BaseExperiment:
         self.num_episodes = 0
 
     def start(self):
+        self.num_steps = 0
         s = self.environment.start()
         obs = self.observationChannel(s)
         self.last_action = self.agent.start(obs)
@@ -18,7 +25,7 @@ class BaseExperiment:
         (reward, s, term) = self.environment.step(self.last_action)
         obs = self.observationChannel(s)
         self.total_reward += reward
-
+        self.environment.render()
         if term:
             self.num_episodes += 1
             self.agent.end(reward)
@@ -32,8 +39,8 @@ class BaseExperiment:
         return roat
 
     def runEpisode(self, max_steps = 0):
-        is_terminal = False
 
+        is_terminal = False
         self.start()
 
         while (not is_terminal) and ((max_steps == 0) or (self.num_steps < max_steps)):
