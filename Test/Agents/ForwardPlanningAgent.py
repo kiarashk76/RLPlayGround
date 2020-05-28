@@ -1,5 +1,6 @@
-from BaseAgent import BaseAgent
+from Test.Agents.BaseAgent import BaseAgent
 from Test.Networks.StateValueFunction import StateVFNN
+from Test.Networks.ModelNN.StateTransitionModel import StateTransitionModel
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,10 +20,14 @@ class ForwardPlannerAgent(BaseAgent):
         self.batch_size = params['batch_size']
         self.vf_layers_type = ['fc']
         self.vf_layers_features = [32]
-        
         self.model_layers_type = ['fc']
         self.model_layers_features = [32]
         self.greedy = False
+        self.planning_steps = 2
+        self.buffer_size = 1
+        self.buffer = []
+        self.state_transition_model = None
+        self.reward_function = params['reward_function']
 
         # default `log_dir` is "runs" - we'll be more specific here
         self.writer = SummaryWriter('runs/')
@@ -40,6 +45,11 @@ class ForwardPlannerAgent(BaseAgent):
             self.q_value_function = []
             for i in range(len(self.action_list)):
                 self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+        if self.state_transition_model is None:
+            nn_state_shape = (self.batch_size,) + self.prev_state.shape
+            self.state_transition_model = []
+            for i in range(len(self.action_list)):
+                self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
@@ -53,10 +63,15 @@ class ForwardPlannerAgent(BaseAgent):
         :param observation: numpy array
         :return: action
         '''
+        if len(self.buffer) >= self.buffer_size:
+            self.buffer.pop(0)
+        self.buffer.append(self.prev_state)
+
         self.state = self.agentState(observation)
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         x_new = torch.from_numpy(self.state).unsqueeze(0)
         self.action = self.policy(x_new, greedy= self.greedy)
+
 
         action_index = self.getActionIndex(self.action)
         prev_action_index = self.getActionIndex(self.prev_action)
@@ -71,8 +86,14 @@ class ForwardPlannerAgent(BaseAgent):
         self.prev_state = self.state
         self.prev_action = self.action
 
+        self.planForward()
+
         self.writer.add_scalar('loss', loss.item())
         self.writer.close()
+
+
+
+
         return self.prev_action
 
     def end(self, reward):
@@ -110,9 +131,43 @@ class ForwardPlannerAgent(BaseAgent):
             f.data.sub_(self.step_size * f.grad.data)
         self.q_value_function[action].zero_grad()
 
-
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
             if list(a) == list(action):
                 return i
         raise ValueError("action is not defined")
+
+    def planForward(self):
+        for i in range (len(self.buffer)):
+            state = self.buffer[i]
+            next_state = None
+            action = self.rollout_policy(state)
+            action_index = self.getActionIndex(action)
+            next_action = None
+            for j in range(self.planning_steps):
+                next_state = self.state_transition_model[action_index](state)
+                next_action = self.rollout_policy(next_state)
+                next_action_index = self.getActionIndex(next_action)
+                x_old = torch.from_numpy(state).unsqueeze(0)
+                x_new = torch.from_numpy(next_state).unsqueeze(0)
+                reward = self.reward_function(next_state)
+                target = reward + self.gamma * self.q_value_function[next_action_index](x_new).detach()
+                action_index = self.getActionIndex(action)
+
+                input = self.q_value_function[action_index](x_old)
+                loss = nn.MSELoss()(input, target)
+
+                loss.backward()
+                self.updateWeights(action_index)
+
+                state = next_state
+                action = next_action
+
+
+    def rollout_policy(self, state):
+        action = self.action_list[int(np.random.rand() * self.num_actions)]
+        return action
+
+
+
+
