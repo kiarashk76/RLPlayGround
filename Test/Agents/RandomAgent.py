@@ -1,4 +1,4 @@
-from BaseAgent import BaseAgent
+from Test.Agents.BaseAgent import BaseAgent
 import numpy as np
 
 class RandomAgent(BaseAgent):

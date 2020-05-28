@@ -1,6 +1,6 @@
-from BaseExperiment import BaseExperiment
-from GridWorldBase import GridWorld
-from SemiGradTDAgent2 import SemiGradientTD
+from Test.Experiments.BaseExperiment import BaseExperiment
+from Test.Envs.GridWorldBase import GridWorld
+from Test.Agents.SemiGradTDAgent2 import SemiGradientTD
 import numpy as np
 import matplotlib.pyplot as plt
 import torch

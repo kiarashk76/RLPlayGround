@@ -1,4 +1,4 @@
-from BaseAgent import BaseAgent
+from Test.Agents.BaseAgent import BaseAgent
 import numpy as np
 import torch
 import torch.nn as nn

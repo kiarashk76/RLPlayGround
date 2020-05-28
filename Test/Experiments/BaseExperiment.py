@@ -1,5 +1,5 @@
-from GridWorldBase import GridWorld
-from RandomAgent import RandomAgent
+from Test.Envs.GridWorldBase import GridWorld
+from Test.Agents.RandomAgent import RandomAgent
 import numpy as np
 
 import pygame

@@ -1,4 +1,4 @@
-from BaseAgent import BaseAgent
+from Test.Agents.BaseAgent import BaseAgent
 from Test.Networks.StateActionValueFunction import StateActionVFNN
 import numpy as np
 import torch

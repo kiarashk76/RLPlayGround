@@ -1,4 +1,4 @@
-from BaseEnvironment import BaseEnvironment
+from Test.Envs.BaseEnvironment import BaseEnvironment
 import numpy as np
 
 right = 1

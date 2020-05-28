@@ -1,7 +1,7 @@
-from BaseExperiment import BaseExperiment
-from SemiGradientAgent import SGAgent
-from GridWorld2D import GridWorld2D
-from Chain import Chain
+from Test.Experiments.BaseExperiment import BaseExperiment
+from Test.Agents.SemiGradientAgent import SGAgent
+from Test.Envs.GridWorld2D import GridWorld2D
+from Test.Envs.Chain import Chain
 import numpy as np
 import torch
 
