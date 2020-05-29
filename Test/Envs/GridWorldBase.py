@@ -231,6 +231,7 @@ class GridWorld():
             grid = self._grid.copy()
             grid[self._agent_pos] = self._ground_color
             grid[pos] = self._agent_color
+            return grid
 
         elif state_type == 'nei_obs':
             raise NotImplementedError("neighbouring observation is not implemented")
@@ -242,9 +243,10 @@ class GridWorld():
         if state_type == 'full_obs':
             for i in range(state.shape[0]):
                 for j in range(state.shape[1]):
-                    if state[i,j] == self._agent_color:
+                    if np.array_equal(state[i,j], self._agent_color):
                         pos = i,j
                         return pos
+            raise ValueError("agent is not in the grid")
 
         elif state_type == 'nei_obs':
             raise NotImplementedError("neighbouring observation is not implemented")

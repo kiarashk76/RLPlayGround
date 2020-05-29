@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
-class ForwardPlannerAgent(BaseAgent):
+class BackwardPlannerAgent(BaseAgent):
     def __init__(self, params = {}):
         self.q_value_function = None
         self.action_list = params['action_list']
@@ -27,7 +27,7 @@ class ForwardPlannerAgent(BaseAgent):
         self.planning_steps = 2
         self.buffer_size = 1
         self.buffer = []
-        self.state_transition_model = None
+        self.state_inv_transition_model = None
         self.reward_function = params['reward_function']
         self.goal = params['goal']
         # default `log_dir` is "runs" - we'll be more specific here
@@ -46,11 +46,11 @@ class ForwardPlannerAgent(BaseAgent):
             self.q_value_function = []
             for i in range(len(self.action_list)):
                 self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
-        if self.state_transition_model is None:
+        if self.state_inv_transition_model is None:
             nn_state_shape = (self.batch_size,) + self.prev_state.shape
-            self.state_transition_model = []
+            self.state_inv_transition_model = []
             for i in range(len(self.action_list)):
-                self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.model_layers_type, self.model_layers_features))
+                self.state_inv_transition_model.append(StateTransitionModel(nn_state_shape, self.model_layers_type, self.model_layers_features))
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
@@ -89,7 +89,7 @@ class ForwardPlannerAgent(BaseAgent):
 
 
         self.trainModel(self.prev_state, self.prev_action, self.state)
-        self.planForward()
+        self.planBackward()
 
         self.writer.add_scalar('loss', loss.item())
         self.writer.close()
@@ -140,18 +140,19 @@ class ForwardPlannerAgent(BaseAgent):
                 return i
         raise ValueError("action is not defined")
 
-    def planForward(self):
+    def planBackward(self):
         for i in range (len(self.buffer)):
-            state = self.buffer[i]
-            state = torch.from_numpy(state).unsqueeze(0)
-            next_state = None
-            action = self.rollout_policy(state)
-            action_index = self.getActionIndex(action)
-            next_action = None
+            next_state = self.buffer[i]
+            next_state = torch.from_numpy(next_state).unsqueeze(0)
+            state = None
+            next_action = self.policy(next_state)
+            next_action_index = self.getActionIndex(next_action)
+
             for j in range(self.planning_steps):
-                next_state = self.state_transition_model[action_index](state)
-                next_action = self.rollout_policy(next_state)
-                next_action_index = self.getActionIndex(next_action)
+                action = self.rollout_policy(next_state)
+                action_index = self.getActionIndex(action)
+                state = self.state_inv_transition_model[action_index](next_state)
+
                 is_terminal = np.array_equal(next_state.detach().numpy()[0], self.goal)
                 if is_terminal:
                     reward = 3
@@ -159,9 +160,10 @@ class ForwardPlannerAgent(BaseAgent):
                     reward = -1
                 # reward = self.reward_function(next_state.detach().numpy())
                 target = reward
+                next_action_index = self.getActionIndex(next_action)
+
                 if not is_terminal:
                     target += self.gamma * self.q_value_function[next_action_index](next_state).detach()
-                action_index = self.getActionIndex(action)
 
                 input = self.q_value_function[action_index](state)
                 loss = nn.MSELoss()(input, target)
@@ -171,8 +173,8 @@ class ForwardPlannerAgent(BaseAgent):
                 if is_terminal:
                     break
 
-                state = next_state.detach()
-                action = next_action
+                next_state = state.detach()
+                next_action = action
 
 
     def rollout_policy(self, state):
@@ -187,13 +189,13 @@ class ForwardPlannerAgent(BaseAgent):
         x_old = torch.from_numpy(state).unsqueeze(0).float()
         x_new = torch.from_numpy(next_state).unsqueeze(0).float()
         action_index = self.getActionIndex(action)
-        input = self.state_transition_model[action_index](x_old)
-        target = x_new
+        input = self.state_inv_transition_model[action_index](x_new)
+        target = x_old
         loss = nn.MSELoss()(input, target)
         loss.backward()
         self.updateModelWeights(action_index)
 
     def updateModelWeights(self, action_index):
-        for f in self.state_transition_model[action_index].parameters():
+        for f in self.state_inv_transition_model[action_index].parameters():
             f.data.sub_(self.model_step_size * f.grad.data)
-        self.state_transition_model[action_index].zero_grad()
+        self.state_inv_transition_model[action_index].zero_grad()

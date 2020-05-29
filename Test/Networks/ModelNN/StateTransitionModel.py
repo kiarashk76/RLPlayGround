@@ -44,5 +44,5 @@ class StateTransitionModel(nn.Module):
             else:
                 raise ValueError("layer is not defined")
         x = self.head(x.float())
-        return x.view((-1,) + state.shape) # -1 is for the batch size
+        return x.view(state.shape) # -1 is for the batch size
 

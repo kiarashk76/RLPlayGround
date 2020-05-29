@@ -2,6 +2,8 @@ from Test.Experiments.BaseExperiment import BaseExperiment
 from Test.Envs.GridWorldBase import GridWorld
 from Test.Agents.SemiGradTDAgent2 import SemiGradientTD
 from Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
+from Test.Agents.BackwardPlanningAgent import BackwardPlannerAgent
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -9,7 +11,7 @@ import torch
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, params=None):
         if params is None:
-            params = {'render': True}
+            params = {'render': False}
         self._render_on = params['render']
         self.num_steps_lst = []
         super().__init__(agent, env)
@@ -100,6 +102,24 @@ class GridWorldExperiment(BaseExperiment):
         # function to show the plot
         plt.show()
 
+    def calculateModelError(self):
+        sum = 0.0
+        cnt = 0.0
+        states = self.environment.getAllStates()
+        actions = self.environment.getAllActions()
+        for s in states:
+            for a in actions:
+                action_index = self.agent.getActionIndex(a)
+                true_state = self.environment.transitionFunction(s, a)
+                pred_state = self.agent.state_transition_model[action_index](torch.from_numpy(s).unsqueeze(0))
+                pred_state = pred_state[0].detach().numpy()
+                mse = (np.square(true_state - pred_state)).mean()
+                sum += mse
+                cnt += 1
+        avg = sum / cnt
+        print(avg)
+
+
 if __name__ == '__main__':
     # 0,6
     four_room_params = {'size': (7, 7), 'init_state': (6,0), 'state_mode': 'full_obs',
@@ -148,17 +168,27 @@ if __name__ == '__main__':
                             'aging_reward': -1
                             }
 
-    env = GridWorld(params=empty_room_params_10d)
-    reward_function = None
-    agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+    env = GridWorld(params=empty_room_params_3d)
+    reward_function = env.rewardFunction
+    goal = env.posToState((0,2), state_type='full_obs')
+    # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
+    #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
+    #                         'batch_size': 1})
+    # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+    #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
+    #                         'batch_size': 1, 'reward_function': reward_function,
+    #                         'goal': goal, 'model_step_size': 0.05})
+    agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
                             'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-                            'batch_size': 1, 'reward_function': reward_function})
+                            'batch_size': 1, 'reward_function': reward_function,
+                            'goal': goal, 'model_step_size': 0.05})
     experiment = GridWorldExperiment(agent, env)
 
 
 
     # print(env.getAllStates())
-    for i in range(100):
+    for i in range(400):
         print("starting episode ", i+1)
         experiment.runEpisode(200)
+        # experiment.calculateModelError()
     experiment.draw_num_steps()
