@@ -58,7 +58,7 @@ class StateTransitionModel(nn.Module):
                     x = torch.cat((x.float(), a.float()), dim=1)
 
                 x = self.layers[i](x.float())
-                x = F.relu(x)
+                x = F.tanh(x)
             else:
                 raise ValueError("layer is not defined")
 
@@ -67,14 +67,17 @@ class StateTransitionModel(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         x = self.head(x.float())
+        # x = F.tanh(x)
+        # x = F.gelu(x)
+        x = F.tanh(x)
+
         return x.view(state.shape) # -1 is for the batch size
 
 
-
-if __name__ =='__main__':
+def preTrainForwad():
     train, test = data_store()
     model_layers_type = ['fc', 'fc']
-    model_layers_features = [32,32]
+    model_layers_features = [32, 32]
     model_step_size = 0.1
     batch_size = 5
     num_epochs = 1000
@@ -83,8 +86,7 @@ if __name__ =='__main__':
                                                    (batch_size, ) + train[0].action.shape,
                                                    model_layers_type,
                                                    model_layers_features,
-                                                   action_layer_num= 1))
-
+                                                   action_layer_num= 2))
 
     for i in range(num_epochs):
         batch_count = 0
@@ -125,7 +127,7 @@ if __name__ =='__main__':
             input = state_transition_model(x_old, action)
             target = x_new
 
-            optimizer = optim.SGD(state_transition_model.parameters(), lr=model_step_size)
+            optimizer = optim.SGD(state_transition_model.parameters(), lr = model_step_size)
             optimizer.zero_grad()
             loss = nn.MSELoss()(input, target)
             loss.backward()
@@ -151,5 +153,86 @@ if __name__ =='__main__':
 
             sum += err
         mse = sum / len(test)
-
         print(mse)
+
+
+def preTrainBackward():
+    train, test = data_store()
+    model_layers_type = ['fc', 'fc']
+    model_layers_features = [32, 32]
+    model_step_size = 0.1
+    batch_size = 5
+    num_epochs = 1000
+
+    state_transition_model = (StateTransitionModel((batch_size, ) + train[0].state.shape,
+                                                   (batch_size, ) + train[0].action.shape,
+                                                   model_layers_type,
+                                                   model_layers_features,
+                                                   action_layer_num= 2))
+
+    for i in range(num_epochs):
+        batch_count = 0
+        state_list = []
+        next_state_list = []
+        action_list = []
+
+        for data in train:
+            state, action, next_state, reward = data
+            state_list.append(state)
+            action_list.append(action)
+            next_state_list.append(next_state)
+            batch_count += 1
+
+            if batch_count == batch_size:
+                x_old = torch.from_numpy(np.asarray(state_list)).float()
+                x_new = torch.from_numpy(np.asarray(next_state_list)).float()
+                action = torch.from_numpy(np.asarray(action_list)).float()
+
+                input = state_transition_model(x_new, action)
+                target = x_old
+                loss = nn.MSELoss()(input, target)
+                loss.backward()
+
+                for f in state_transition_model.parameters():
+                    f.data.sub_(model_step_size * f.grad.data)
+                state_transition_model.zero_grad()
+                batch_count = 0
+                state_list = []
+                action_list = []
+                next_state_list = []
+
+        if batch_count > 0:
+            x_old = torch.from_numpy(np.asarray(state_list)).float()
+            x_new = torch.from_numpy(np.asarray(next_state_list)).float()
+            action = torch.from_numpy(np.asarray(action_list)).float()
+
+            input = state_transition_model(x_new, action)
+            target = x_old
+
+            optimizer = optim.SGD(state_transition_model.parameters(), lr = model_step_size)
+            optimizer.zero_grad()
+            loss = nn.MSELoss()(input, target)
+            loss.backward()
+            optimizer.step()
+
+            # for f in state_transition_model.parameters():
+            #     f.data.sub_(model_step_size * f.grad.data)
+            # state_transition_model.zero_grad()
+
+
+        sum = 0.0
+        for data in test:
+            state, action, next_state, reward = data
+            state = torch.from_numpy(state).unsqueeze(0).float()
+            next_state = torch.from_numpy(next_state).unsqueeze(0).float()
+            action = torch.from_numpy(action).unsqueeze(0).float()
+            pred_state = state_transition_model(next_state, action).detach()
+            err = (np.square(state - pred_state)).mean()
+
+            sum += err
+        mse = sum / len(test)
+        print(mse)
+
+if __name__ =='__main__':
+    # preTrainForwad()
+    preTrainBackward()
