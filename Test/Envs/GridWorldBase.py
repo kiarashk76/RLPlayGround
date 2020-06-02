@@ -135,7 +135,7 @@ class GridWorld():
             else:
                 raise ValueError("state type is unknown")
 
-            return reward + self._aging_reward, self._state, is_terminal
+            return reward, self._state, is_terminal
 
     def getAllStates(self, state_type= None):
         agent_pos_list = []
@@ -205,7 +205,7 @@ class GridWorld():
                     reward += self._rewards_value[i]
         else:
             raise ValueError('position for reward function is out of range')
-        return reward
+        return reward + self._aging_reward
 
     def __terminalFunction(self, pos):
         if self.checkPosInsideGrid(pos):
