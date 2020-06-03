@@ -153,7 +153,9 @@ def preTrainForwad():
 
             sum += err
         mse = sum / len(test)
-        print(mse)
+        # print(mse)
+
+    return state_transition_model
 
 
 def preTrainBackward():
@@ -231,8 +233,9 @@ def preTrainBackward():
 
             sum += err
         mse = sum / len(test)
-        print(mse)
+        # print(mse)
+    return state_transition_model
 
 if __name__ =='__main__':
-    # preTrainForwad()
-    preTrainBackward()
+    forward_model = preTrainForwad()
+    backward_model = preTrainBackward()

@@ -4,7 +4,8 @@ from Test.Networks.ModelNN.StateTransitionModel import StateTransitionModel
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
+from Test.Networks.ModelNN.StateTransitionModel import preTrainForwad
 
 class ForwardPlannerAgent(BaseAgent):
     def __init__(self, params = {}):
@@ -27,11 +28,12 @@ class ForwardPlannerAgent(BaseAgent):
         self.planning_steps = 2
         self.buffer_size = 1
         self.buffer = []
-        self.state_transition_model = None
+        self.state_transition_model = preTrainForwad()
         self.reward_function = params['reward_function']
         self.goal = params['goal']
         # default `log_dir` is "runs" - we'll be more specific here
-        self.writer = SummaryWriter('runs/')
+        # self.writer = SummaryWriter('runs/')
+
 
     def start(self, observation):
         '''
@@ -46,11 +48,11 @@ class ForwardPlannerAgent(BaseAgent):
             self.q_value_function = []
             for i in range(len(self.action_list)):
                 self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
-        if self.state_transition_model is None:
-            nn_state_shape = (self.batch_size,) + self.prev_state.shape
-            self.state_transition_model = []
-            for i in range(len(self.action_list)):
-                self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.model_layers_type, self.model_layers_features))
+        # if self.state_transition_model is None:
+        #     nn_state_shape = (self.batch_size,) + self.prev_state.shape
+        #     self.state_transition_model = []
+        #     for i in range(len(self.action_list)):
+        #         self.state_transition_model.append(StateTransitionModel(nn_state_shape, self.model_layers_type, self.model_layers_features))
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
@@ -88,11 +90,11 @@ class ForwardPlannerAgent(BaseAgent):
         self.prev_action = self.action
 
 
-        self.trainModel(self.prev_state, self.prev_action, self.state)
+        # self.trainModel(self.prev_state, self.prev_action, self.state)
         self.planForward()
 
-        self.writer.add_scalar('loss', loss.item())
-        self.writer.close()
+        # self.writer.add_scalar('loss', loss.item())
+        # self.writer.close()
 
 
 
@@ -146,10 +148,10 @@ class ForwardPlannerAgent(BaseAgent):
             state = torch.from_numpy(state).unsqueeze(0)
             next_state = None
             action = self.rollout_policy(state)
-            action_index = self.getActionIndex(action)
+            # action_index = self.getActionIndex(action)
             next_action = None
             for j in range(self.planning_steps):
-                next_state = self.state_transition_model[action_index](state)
+                next_state = self.state_transition_model(state, torch.from_numpy(action).unsqueeze(0))
                 next_action = self.rollout_policy(next_state)
                 next_action_index = self.getActionIndex(next_action)
                 is_terminal = np.array_equal(next_state.detach().numpy()[0], self.goal)
