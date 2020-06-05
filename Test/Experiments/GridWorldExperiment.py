@@ -3,6 +3,8 @@ from Test.Envs.GridWorldBase import GridWorld
 from Test.Agents.SemiGradTDAgent2 import SemiGradientTD
 from Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
 from Test.Agents.BackwardPlanningAgent import BackwardPlannerAgent
+from Test.Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -88,6 +90,8 @@ class GridWorldExperiment(BaseExperiment):
         # corresponding y axis values
         y = self.num_steps_lst
 
+        plt.ylim(0, 200)
+
         # plotting the points
         plt.plot(x, y)
 
@@ -171,23 +175,33 @@ if __name__ == '__main__':
     env = GridWorld(params=empty_room_params_3d)
     reward_function = env.rewardFunction
     goal = env.posToState((0,2), state_type='full_obs')
+
     # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
     #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
     #                         'batch_size': 1})
+
     # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
     #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
     #                         'batch_size': 1, 'reward_function': reward_function,
     #                         'goal': goal, 'model_step_size': 0.05})
-    agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-                            'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-                            'batch_size': 1, 'reward_function': reward_function,
-                            'goal': goal, 'model_step_size': 0.05})
+
+    # agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+    #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
+    #                         'batch_size': 1, 'reward_function': reward_function,
+    #                         'goal': goal, 'model_step_size': 0.05})
+
+    agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+                                  'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
+                                  'batch_size': 1, 'reward_function': reward_function,
+                                  'goal': goal, 'model_step_size': 0.05,
+                                  'pre_trained_model': False})
+
     experiment = GridWorldExperiment(agent, env)
 
 
 
     # print(env.getAllStates())
-    for i in range(400):
+    for i in range(100):
         print("starting episode ", i+1)
         experiment.runEpisode(200)
         # experiment.calculateModelError()
