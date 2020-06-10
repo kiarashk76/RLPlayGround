@@ -1,10 +1,10 @@
-from Test.Experiments.BaseExperiment import BaseExperiment
-from Test.Envs.GridWorldNbN import GridWorldND
-from Test.Envs.GridWorldBase import GridWorld
-from Test.Agents.SemiGradTDAgent2 import SemiGradientTD
-from Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
-from Test.Agents.BackwardPlanningAgent import BackwardPlannerAgent
-from Test.Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
+from ../../Test.Experiments.BaseExperiment import BaseExperiment
+from ../../Test.Envs.GridWorldNbN import GridWorldND
+from ../../Test.Envs.GridWorldBase import GridWorld
+from ../../Test.Agents.SemiGradTDAgent2 import SemiGradientTD
+from ../../Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
+from ../../Test.Agents.BackwardPlanningAgent import BackwardPlannerAgent
+from ../../Test.Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
 
 
 import numpy as np
