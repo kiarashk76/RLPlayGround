@@ -28,7 +28,7 @@ class ForwardPlannerAgent(BaseAgent):
         self.planning_steps = 2
         self.buffer_size = 1
         self.buffer = []
-        self.state_transition_model = preTrainForwad()
+        self.state_transition_model = None  #   preTrainForwad()
         self.reward_function = params['reward_function']
         self.goal = params['goal']
         # default `log_dir` is "runs" - we'll be more specific here
@@ -40,7 +40,6 @@ class ForwardPlannerAgent(BaseAgent):
         :param observation: numpy array
         :return: action:
         '''
-        # raise NotImplementedError('Expected `start` to be implemented')
 
         self.prev_state = self.agentState(observation)
         if self.q_value_function is None:
@@ -48,6 +47,7 @@ class ForwardPlannerAgent(BaseAgent):
             self.q_value_function = []
             for i in range(len(self.action_list)):
                 self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+
 
         # if self.state_transition_model is None:
         #     nn_state_shape = (self.batch_size,) + self.prev_state.shape
@@ -57,6 +57,14 @@ class ForwardPlannerAgent(BaseAgent):
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
+
+        if self.state_transition_model is None:
+            nn_state_shape = (self.batch_size,) + self.prev_state.shape
+            nn_action_shape = (self.batch_size,) +self.prev_action.shape
+            self.state_transition_model = StateTransitionModel(nn_state_shape, nn_action_shape,
+                                                               self.model_layers_type,
+                                                               self.model_layers_features,
+                                                               action_layer_num= 1)
 
         return self.prev_action
 
@@ -91,7 +99,7 @@ class ForwardPlannerAgent(BaseAgent):
         self.prev_action = self.action
 
 
-        # self.trainModel(self.prev_state, self.prev_action, self.state)
+        self.trainModel(self.prev_state, self.prev_action, self.state)
         self.planForward()
 
         # self.writer.add_scalar('loss', loss.item())
@@ -189,14 +197,16 @@ class ForwardPlannerAgent(BaseAgent):
     def trainModel(self, state, action, next_state):
         x_old = torch.from_numpy(state).unsqueeze(0).float()
         x_new = torch.from_numpy(next_state).unsqueeze(0).float()
-        action_index = self.getActionIndex(action)
-        input = self.state_transition_model[action_index](x_old)
+        action = torch.from_numpy(action).unsqueeze(0).float()
+
+        input = self.state_transition_model(x_old, action)
         target = x_new
+
         loss = nn.MSELoss()(input, target)
         loss.backward()
-        self.updateModelWeights(action_index)
+        self.updateModelWeights()
 
-    def updateModelWeights(self, action_index):
-        for f in self.state_transition_model[action_index].parameters():
+    def updateModelWeights(self):
+        for f in self.state_transition_model.parameters():
             f.data.sub_(self.model_step_size * f.grad.data)
-        self.state_transition_model[action_index].zero_grad()
+        self.state_transition_model.zero_grad()

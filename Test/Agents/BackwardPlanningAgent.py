@@ -29,7 +29,7 @@ class BackwardPlannerAgent(BaseAgent):
         self.planning_steps = 2
         self.buffer_size = 1
         self.buffer = []
-        self.state_inv_transition_model = preTrainBackward()
+        self.state_inv_transition_model = None #preTrainBackward()
         self.reward_function = params['reward_function']
         self.goal = params['goal']
         # default `log_dir` is "runs" - we'll be more specific here
@@ -48,6 +48,7 @@ class BackwardPlannerAgent(BaseAgent):
             self.q_value_function = []
             for i in range(len(self.action_list)):
                 self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+
         # if self.state_inv_transition_model is None:
         #     nn_state_shape = (self.batch_size,) + self.prev_state.shape
         #     self.state_inv_transition_model = []
@@ -56,6 +57,14 @@ class BackwardPlannerAgent(BaseAgent):
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
+
+        if self.state_inv_transition_model is None:
+            nn_state_shape = (self.batch_size,) + self.prev_state.shape
+            nn_action_shape = (self.batch_size,) +self.prev_action.shape
+            self.state_inv_transition_model = StateTransitionModel(nn_state_shape, nn_action_shape,
+                                                               self.model_layers_type,
+                                                               self.model_layers_features,
+                                                               action_layer_num= 1)
 
         return self.prev_action
 
@@ -90,7 +99,7 @@ class BackwardPlannerAgent(BaseAgent):
         self.prev_action = self.action
 
 
-        # self.trainModel(self.prev_state, self.prev_action, self.state)
+        self.trainModel(self.prev_state, self.prev_action, self.state)
         self.planBackward()
 
         # self.writer.add_scalar('loss', loss.item())
@@ -190,14 +199,16 @@ class BackwardPlannerAgent(BaseAgent):
     def trainModel(self, state, action, next_state):
         x_old = torch.from_numpy(state).unsqueeze(0).float()
         x_new = torch.from_numpy(next_state).unsqueeze(0).float()
-        action_index = self.getActionIndex(action)
-        input = self.state_inv_transition_model[action_index](x_new)
+        action = torch.from_numpy(action).unsqueeze(0).float()
+
+        input = self.state_inv_transition_model(x_new, action)
         target = x_old
+
         loss = nn.MSELoss()(input, target)
         loss.backward()
-        self.updateModelWeights(action_index)
+        self.updateModelWeights()
 
-    def updateModelWeights(self, action_index):
-        for f in self.state_inv_transition_model[action_index].parameters():
+    def updateModelWeights(self):
+        for f in self.state_inv_transition_model.parameters():
             f.data.sub_(self.model_step_size * f.grad.data)
-        self.state_inv_transition_model[action_index].zero_grad()
+        self.state_inv_transition_model.zero_grad()

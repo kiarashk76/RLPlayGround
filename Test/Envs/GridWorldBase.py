@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 # import pygame
-
+import random
 
 class GridWorld():
     def __init__(self, params=None):
@@ -105,37 +105,34 @@ class GridWorld():
         """
         return reward, next env state, is terminal, info
         """
-        if np.random.rand() < self._transition_randomness :
-            pass # do a random transition
+        if action not in self._actions_list:
+            raise ValueError("Incorrect action")
+
+        # update agent.pos and grid
+        self._grid[self._agent_pos] = self._ground_color
+        next_agent_pos = self.__transitionFunction(self._agent_pos, action)
+        if next_agent_pos not in self._obstacles_pos:
+            self._agent_pos = next_agent_pos
+        self._grid[self._agent_pos] = self._agent_color
+
+        # calculate the reward and termination of the transition
+        reward = self.__rewardFunction(self._agent_pos)
+        is_terminal = self.__terminalFunction(self._agent_pos)
+
+        # calculate the state
+        if self._state_mode == 'coord':
+            self._state = self._agent_pos  # a tuple of the agent's position
+
+        elif self._state_mode == 'full_obs':
+            self._state = np.copy(self._grid)  # a np.array of the full grid
+
+        elif self._state_mode == 'nei_obs':
+            raise NotImplemented("need to be implemented")  # a np.array of partially neighbours grid
+
         else:
-            if action not in self._actions_list:
-                raise ValueError("Incorrect action")
+            raise ValueError("state type is unknown")
 
-            # update agent.pos and grid
-            self._grid[self._agent_pos] = self._ground_color
-            next_agent_pos = self.__transitionFunction(self._agent_pos, action)
-            if next_agent_pos not in self._obstacles_pos:
-                self._agent_pos = next_agent_pos
-            self._grid[self._agent_pos] = self._agent_color
-
-            # calculate the reward and termination of the transition
-            reward = self.__rewardFunction(self._agent_pos)
-            is_terminal = self.__terminalFunction(self._agent_pos)
-
-            # calculate the state
-            if self._state_mode == 'coord':
-                self._state = self._agent_pos  # a tuple of the agent's position
-
-            elif self._state_mode == 'full_obs':
-                self._state = np.copy(self._grid)  # a np.array of the full grid
-
-            elif self._state_mode == 'nei_obs':
-                raise NotImplemented("need to be implemented")  # a np.array of partially neighbours grid
-
-            else:
-                raise ValueError("state type is unknown")
-
-            return reward, self._state, is_terminal
+        return reward, self._state, is_terminal
 
     def getAllStates(self, state_type= None):
         agent_pos_list = []
@@ -218,6 +215,9 @@ class GridWorld():
             raise ValueError('position for reward function is out of range')
 
     def __transitionFunction(self, pos, action):
+        if np.random.rand() < self._transition_randomness :
+            # choose a random action
+            action = self.getAllActions()[random.randint(0, len(self.getAllActions()) - 1)]
         next_pos = tuple(sum(x) for x in zip(pos, action))
         if self.checkPosInsideGrid(next_pos):
             return next_pos
