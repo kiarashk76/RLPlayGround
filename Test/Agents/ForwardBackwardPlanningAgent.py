@@ -44,6 +44,8 @@ class ForwardBackwardPlannerAgent(BaseAgent):
 
         self.reward_function = params['reward_function']
         self.goal = params['goal']
+        self.device = params['device']
+
         # default `log_dir` is "runs" - we'll be more specific here
         # self.writer = SummaryWriter('runs/')
 
@@ -59,7 +61,9 @@ class ForwardBackwardPlannerAgent(BaseAgent):
             nn_state_shape = (self.batch_size,) + self.prev_state.shape
             self.q_value_function = []
             for i in range(len(self.action_list)):
-                self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+                v = StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features)
+                v.to(self.device)
+                self.q_value_function.append(v)
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)
@@ -73,6 +77,7 @@ class ForwardBackwardPlannerAgent(BaseAgent):
                                  self.fw_model_layers_type,
                                  self.fw_model_layers_features,
                                  action_layer_num=2)
+            self.fw_state_transition_model.to(self.device)
 
         if self.bw_state_transition_model is None:
             self.bw_state_transition_model = \
@@ -81,6 +86,7 @@ class ForwardBackwardPlannerAgent(BaseAgent):
                                  self.bw_model_layers_type,
                                  self.bw_model_layers_features,
                                  action_layer_num=2)
+            self.bw_state_transition_model.to(self.device)
 
         return self.prev_action
 

@@ -129,6 +129,13 @@ class GridWorldExperiment(BaseExperiment):
 
 
 class RunExperiment():
+    def __init__(self):
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        # Assuming that we are on a CUDA machine, this should print a CUDA device:
+
+        print(self.device)
+
     def draw_num_steps(self, num_steps_list, name = ''):
         # x axis values
         x = range(len(num_steps_list))
@@ -180,23 +187,27 @@ class RunExperiment():
 
             # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
             #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
-            #                         'batch_size': 1})
+            #                         'batch_size': 1,
+            #                         'device': self.device})
 
             # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
             #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
             #                         'batch_size': 1, 'reward_function': reward_function,
-            #                         'goal': goal, 'model_step_size': 0.05})
+            #                         'goal': goal, 'model_step_size': 0.05,
+            #                         'device': self.device})
 
             agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
                                           'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
                                           'batch_size': 1, 'reward_function': reward_function,
-                                          'goal': goal, 'model_step_size': 0.05})
+                                          'goal': goal, 'model_step_size': 0.05,
+                                          'device': self.device})
 
             # agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
             #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
             #                               'batch_size': 1, 'reward_function': reward_function,
             #                               'goal': goal, 'model_step_size': 0.05,
-            #                               'pre_trained_model': False})
+            #                               'pre_trained_model': False,
+            #                               'device': self.device})
 
             experiment = GridWorldExperiment(agent, env)
 

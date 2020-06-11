@@ -3,7 +3,7 @@ from Test.Networks.StateValueFunction import StateVFNN
 import numpy as np
 import torch
 import torch.nn as nn
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 class SemiGradientTD(BaseAgent):
     def __init__(self, params = {}):
@@ -36,7 +36,9 @@ class SemiGradientTD(BaseAgent):
             nn_state_shape = (self.batch_size,) + self.prev_state.shape
             self.q_value_function = []
             for i in range(len(self.action_list)):
-                self.q_value_function.append(StateVFNN(nn_state_shape, self.layers_type, self.layers_features))
+                v = StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features)
+                v.to(self.device)
+                self.q_value_function.append(v)
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old, greedy= self.greedy)

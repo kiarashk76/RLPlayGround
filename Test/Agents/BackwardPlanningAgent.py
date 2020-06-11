@@ -32,6 +32,8 @@ class BackwardPlannerAgent(BaseAgent):
         self.state_inv_transition_model = None #preTrainBackward()
         self.reward_function = params['reward_function']
         self.goal = params['goal']
+        self.device = params['device']
+
         # default `log_dir` is "runs" - we'll be more specific here
         # self.writer = SummaryWriter('runs/')
 
@@ -47,7 +49,9 @@ class BackwardPlannerAgent(BaseAgent):
             nn_state_shape = (self.batch_size,) + self.prev_state.shape
             self.q_value_function = []
             for i in range(len(self.action_list)):
-                self.q_value_function.append(StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features))
+                v = StateVFNN(nn_state_shape, self.vf_layers_type, self.vf_layers_features)
+                v.to(self.device)
+                self.q_value_function.append(v)
 
         # if self.state_inv_transition_model is None:
         #     nn_state_shape = (self.batch_size,) + self.prev_state.shape
@@ -65,6 +69,7 @@ class BackwardPlannerAgent(BaseAgent):
                                                                self.model_layers_type,
                                                                self.model_layers_features,
                                                                action_layer_num= 1)
+            self.state_inv_transition_model.to(self.device)
 
         return self.prev_action
 
