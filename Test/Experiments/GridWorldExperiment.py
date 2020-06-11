@@ -172,15 +172,15 @@ class RunExperiment():
                             'window_size': (255, 255),
                             'aging_reward': -1
                             }
-        env_size = 3
+        env_size = 4
         num_runs = 1
-        num_episode = 20
-        max_step_each_episode = 20
+        num_episode = 300
+        max_step_each_episode = 200
 
         num_steps_list = np.zeros([num_runs, num_episode], dtype = np.int)
 
         for r in range(num_runs):
-            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.0})
+            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.2})
             # env = GridWorld(params = four_room_params)
             reward_function = env.rewardFunction
             goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
