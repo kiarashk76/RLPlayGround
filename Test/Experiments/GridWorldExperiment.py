@@ -1,11 +1,10 @@
-from ../../Test.Experiments.BaseExperiment import BaseExperiment
-from ../../Test.Envs.GridWorldNbN import GridWorldND
-from ../../Test.Envs.GridWorldBase import GridWorld
-from ../../Test.Agents.SemiGradTDAgent2 import SemiGradientTD
-from ../../Test.Agents.ForwardPlanningAgent import ForwardPlannerAgent
-from ../../Test.Agents.BackwardPlanningAgent import BackwardPlannerAgent
-from ../../Test.Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
-
+from ..Experiments.BaseExperiment import BaseExperiment
+from ..Envs.GridWorldNbN import GridWorldND
+from ..Envs.GridWorldBase import GridWorld
+from ..Agents.SemiGradTDAgent2 import SemiGradientTD
+from ..Agents.ForwardPlanningAgent import ForwardPlannerAgent
+from ..Agents.BackwardPlanningAgent import BackwardPlannerAgent
+from ..Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -129,85 +128,83 @@ class GridWorldExperiment(BaseExperiment):
         print(avg)
 
 
+class RunExperiment():
+    def draw_num_steps(self, num_steps_list, name = ''):
+        # x axis values
+        x = range(len(num_steps_list))
+        # corresponding y axis values
+        y = num_steps_list
 
-def draw_num_steps(num_steps_list, name=''):
-    # x axis values
-    x = range(len(num_steps_list))
-    # corresponding y axis values
-    y = num_steps_list
+        plt.ylim(0, 200)
 
-    plt.ylim(0, 200)
+        # plotting the points
+        plt.plot(x, y)
 
-    # plotting the points
-    plt.plot(x, y)
+        # naming the x axis
+        plt.xlabel('episode number')
+        # naming the y axis
+        plt.ylabel('number of steps')
 
-    # naming the x axis
-    plt.xlabel('episode number')
-    # naming the y axis
-    plt.ylabel('number of steps')
+        # giving a title to my graph
+        plt.title('Learning')
 
-    # giving a title to my graph
-    plt.title('Learning')
+        # function to show the plot
+        plt.savefig(name)
+        plt.show()
 
-    # function to show the plot
-    plt.savefig(name)
-    # plt.show()
+    def run_experiment(self):
+        # 0,6
+        four_room_params = {'size': (7, 7), 'init_state': (6, 0), 'state_mode': 'full_obs',
+                            'obstacles_pos': [(3, 0), (3, 2), (0, 3), (2, 3), (3, 3), (4, 3), (6, 3), (3, 4), (3, 6)],
+                            'rewards_pos': [(0, 6)], 'rewards_value': [3],
+                            'terminals_pos': [(0, 6)], 'termination_probs': [1],
+                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)],
+                            'neighbour_distance': 0,
+                            'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
+                            'transition_randomness': 0.0,
+                            'window_size': (255, 255),
+                            'aging_reward': -1
+                            }
+        env_size = 3
+        num_runs = 1
+        num_episode = 20
+        max_step_each_episode = 20
 
-if __name__ == '__main__':
-    # 0,6
-    four_room_params = {'size': (7, 7), 'init_state': (6,0), 'state_mode': 'full_obs',
-              'obstacles_pos': [(3,0),(3,2),(0,3),(2,3),(3,3),(4,3),(6,3),(3,4),(3,6)],
-              'rewards_pos': [(0, 6)], 'rewards_value': [3],
-              'terminals_pos': [(0, 6)], 'termination_probs': [1],
-              'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)],
-              'neighbour_distance': 0,
-              'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
-              'transition_randomness': 0.0,
-              'window_size': (255, 255),
-              'aging_reward': -1
-              }
-    env_size = 3
-    num_runs = 10
-    num_episode = 100
-    max_step_each_episode = 200
+        num_steps_list = np.zeros([num_runs, num_episode], dtype = np.int)
 
+        for r in range(num_runs):
+            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.0})
+            # env = GridWorld(params = four_room_params)
+            reward_function = env.rewardFunction
+            goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
 
-    num_steps_list = np.zeros([num_runs, num_episode], dtype=np.int)
+            # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
+            #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
+            #                         'batch_size': 1})
 
+            # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+            #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
+            #                         'batch_size': 1, 'reward_function': reward_function,
+            #                         'goal': goal, 'model_step_size': 0.05})
 
-    for r in range(num_runs):
-        env = GridWorldND(n=env_size, params={'transition_randomness': 0.0})
-        # env = GridWorld(params = four_room_params)
-        reward_function = env.rewardFunction
-        goal = env.posToState((0, env_size - 1), state_type='full_obs')
+            agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+                                          'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
+                                          'batch_size': 1, 'reward_function': reward_function,
+                                          'goal': goal, 'model_step_size': 0.05})
 
-        # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
-        #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
-        #                         'batch_size': 1})
+            # agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+            #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
+            #                               'batch_size': 1, 'reward_function': reward_function,
+            #                               'goal': goal, 'model_step_size': 0.05,
+            #                               'pre_trained_model': False})
 
-        # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-        #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-        #                         'batch_size': 1, 'reward_function': reward_function,
-        #                         'goal': goal, 'model_step_size': 0.05})
+            experiment = GridWorldExperiment(agent, env)
 
-        agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-                                      'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
-                                      'batch_size': 1, 'reward_function': reward_function,
-                                      'goal': goal, 'model_step_size': 0.05})
-
-        # agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-        #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
-        #                               'batch_size': 1, 'reward_function': reward_function,
-        #                               'goal': goal, 'model_step_size': 0.05,
-        #                               'pre_trained_model': False})
-
-        experiment = GridWorldExperiment(agent, env)
-
-        for e in range(num_episode):
-            print("starting episode ", e+1)
-            experiment.runEpisode(max_step_each_episode)
-            # experiment.calculateModelError()
-            num_steps_list[r, e] = experiment.num_steps
-        # experiment.draw_num_steps()
-    mean_steps = np.mean(num_steps_list, axis=0)
-    draw_num_steps(mean_steps)
+            for e in range(num_episode):
+                print("starting episode ", e + 1)
+                experiment.runEpisode(max_step_each_episode)
+                # experiment.calculateModelError()
+                num_steps_list[r, e] = experiment.num_steps
+            # experiment.draw_num_steps()
+        mean_steps = np.mean(num_steps_list, axis = 0)
+        self.draw_num_steps(mean_steps)
