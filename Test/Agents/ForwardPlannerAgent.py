@@ -61,6 +61,8 @@ class ForwardPlannerAgent(BasePlannerAgent):
         action = self.action_list[np.argmax(v)]
         return action
 
+
+
     def trainModel(self, state, action, next_state):
         x_old = torch.from_numpy(state).unsqueeze(0).float()
         x_new = torch.from_numpy(next_state).unsqueeze(0).float()
