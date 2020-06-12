@@ -2,9 +2,11 @@ from ..Experiments.BaseExperiment import BaseExperiment
 from ..Envs.GridWorldNbN import GridWorldND
 from ..Envs.GridWorldBase import GridWorld
 from ..Agents.SemiGradTDAgent2 import SemiGradientTD
-from ..Agents.ForwardPlanningAgent import ForwardPlannerAgent
-from ..Agents.BackwardPlanningAgent import BackwardPlannerAgent
+from ..Agents.ForwardPlannerAgent import ForwardPlannerAgent
+from ..Agents.BackwardPlannerAgent import BackwardPlannerAgent
 from ..Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
+from Test.Networks.ModelNN.StateTransitionModel import preTrainBackward
+
 from tempfile import TemporaryFile
 import numpy as np
 import matplotlib.pyplot as plt
@@ -190,17 +192,17 @@ class RunExperiment():
             #                         'batch_size': 1,
             #                         'device': self.device})
 
-            # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-            #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-            #                         'batch_size': 1, 'reward_function': reward_function,
-            #                         'goal': goal, 'model_step_size': 0.05,
-            #                         'device': self.device})
+            agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+                                    'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
+                                    'batch_size': 1, 'reward_function': reward_function,
+                                    'goal': goal, 'model_step_size': 0.05, 'model': None,
+                                    'device': self.device})
 
-            agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-                                          'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
-                                          'batch_size': 1, 'reward_function': reward_function,
-                                          'goal': goal, 'model_step_size': 0.05,
-                                          'device': self.device})
+            # agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+            #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
+            #                               'batch_size': 1, 'reward_function': reward_function,
+            #                               'goal': goal, 'model_step_size': 0.05, 'model': None,
+            #                               'device': self.device})
 
             # agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
             #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
