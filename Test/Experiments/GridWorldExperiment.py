@@ -5,7 +5,7 @@ from ..Agents.SemiGradTDAgent2 import SemiGradientTD
 from ..Agents.ForwardPlanningAgent import ForwardPlannerAgent
 from ..Agents.BackwardPlanningAgent import BackwardPlannerAgent
 from ..Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
-
+from tempfile import TemporaryFile
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -173,7 +173,7 @@ class RunExperiment():
                             'aging_reward': -1
                             }
         env_size = 4
-        num_runs = 1
+        num_runs = 3
         num_episode = 300
         max_step_each_episode = 200
 
@@ -218,4 +218,7 @@ class RunExperiment():
                 num_steps_list[r, e] = experiment.num_steps
             # experiment.draw_num_steps()
         mean_steps = np.mean(num_steps_list, axis = 0)
+
+        np.save('backward.npy', num_steps_list)
+
         self.draw_num_steps(mean_steps)

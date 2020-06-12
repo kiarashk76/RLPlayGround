@@ -25,7 +25,7 @@ class ForwardPlannerAgent(BaseAgent):
         self.model_layers_type = ['fc']
         self.model_layers_features = [32]
         self.greedy = False
-        self.planning_steps = 2
+        self.planning_steps = 3
         self.buffer_size = 1
         self.buffer = []
         self.state_transition_model = None  #   preTrainForwad()
@@ -157,37 +157,47 @@ class ForwardPlannerAgent(BaseAgent):
 
     def planForward(self):
         for i in range (len(self.buffer)):
-            state = self.buffer[i]
-            state = torch.from_numpy(state).unsqueeze(0)
-            next_state = None
-            action = self.rollout_policy(state)
-            # action_index = self.getActionIndex(action)
-            next_action = None
+            start_state = self.buffer[i]
+            state = torch.from_numpy(start_state.copy())
+            state = state.unsqueeze(0)
+            rewardList = []
             for j in range(self.planning_steps):
+                action = self.rollout_policy(state)
                 next_state = self.state_transition_model(state, torch.from_numpy(action).unsqueeze(0))
-                next_action = self.rollout_policy(next_state)
-                next_action_index = self.getActionIndex(next_action)
                 is_terminal = np.array_equal(next_state.detach().numpy()[0], self.goal)
                 if is_terminal:
                     reward = 3
                 else:
                     reward = -1
                 # reward = self.reward_function(next_state.detach().numpy())
-                target = reward
-                if not is_terminal:
-                    target += self.gamma * self.q_value_function[next_action_index](next_state).detach()
-                action_index = self.getActionIndex(action)
-
-                input = self.q_value_function[action_index](state)
-                loss = nn.MSELoss()(input, target)
-
-                loss.backward()
-                self.updateWeights(action_index)
+                rewardList.append(reward)
                 if is_terminal:
                     break
-
                 state = next_state.detach()
-                action = next_action
+
+            state = start_state
+            state = torch.from_numpy(state).unsqueeze(0)
+            action = self.rollout_policy(state)
+            action_index = self.getActionIndex(action)
+            next_state = self.state_transition_model(state, torch.from_numpy(action).unsqueeze(0))
+            next_action = self.rollout_policy(next_state)
+            next_action_index = self.getActionIndex(next_action)
+            target = self.q_value_function[next_action_index](next_state).detach()
+            rewardListLen = len(rewardList)
+            for j in range (rewardListLen):
+                target *= self.gamma
+                index = rewardListLen - j - 1
+                target += rewardList[index]
+
+
+            input = self.q_value_function[action_index](state)
+            loss = nn.MSELoss()(input, target)
+
+            loss.backward()
+            self.updateWeights(action_index)
+
+
+
 
 
     def rollout_policy(self, state):

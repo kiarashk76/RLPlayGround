@@ -3,7 +3,7 @@ from Test.Networks.StateValueFunction import StateVFNN
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
 class SemiGradientTD(BaseAgent):
     def __init__(self, params = {}):
@@ -22,7 +22,7 @@ class SemiGradientTD(BaseAgent):
         self.greedy = False
 
         # default `log_dir` is "runs" - we'll be more specific here
-        self.writer = SummaryWriter('runs/')
+        # self.writer = SummaryWriter('runs/')
 
     def start(self, observation):
         '''
