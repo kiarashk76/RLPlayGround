@@ -1,12 +1,12 @@
 from Test.Agents.BaseAgent import BaseAgent
-from Test.Networks.StateValueFunction import StateVFNN
-from Test.Networks.ModelNN.StateTransitionModel import StateTransitionModel
+from ValueFunction.StateValueFunction import StateVFNN
+from ModelNN.StateTransitionModel  import StateTransitionModel
 import numpy as np
 import torch
 import torch.nn as nn
 # from torch.utils.tensorboard import SummaryWriter
-from Test.Networks.ModelNN.StateTransitionModel import preTrainForwad
-from Test.Networks.ModelNN.StateTransitionModel import preTrainBackward
+from ModelNN.StateTransitionModel import preTrainForwad
+from ModelNN.StateTransitionModel  import preTrainBackward
 
 class ForwardBackwardPlannerAgent(BaseAgent):
     def __init__(self, params = {}):

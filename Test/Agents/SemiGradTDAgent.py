@@ -1,5 +1,5 @@
 from Test.Agents.BaseAgent import BaseAgent
-from Test.Networks.StateActionValueFunction import StateActionVFNN
+from ValueFunction.StateActionValueFunction import StateActionVFNN
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,8 +17,8 @@ class SemiGradientTD(BaseAgent):
         self.step_size = params['step_size']
         self.epsilon = params['epsilon']
         self.batch_size = params['batch_size']
-        self.layers_type = ['fc', 'fc']
-        self.layers_features = [32, 16]
+        self.layers_type = ['fc', 'fc', 'fc']
+        self.layers_features = [8, 8, 8]
 
         # default `log_dir` is "runs" - we'll be more specific here
         self.writer = SummaryWriter('runs/')
@@ -28,14 +28,13 @@ class SemiGradientTD(BaseAgent):
         :param observation: numpy array
         :return: action:
         '''
-        # raise NotImplementedError('Expected `start` to be implemented')
 
         self.prev_state = self.agentState(observation)
         if self.q_value_function is None:
             nn_state_shape = (self.batch_size, ) + self.prev_state.shape
             nn_action_shape = (self.batch_size, ) + (self.actions_shape, )
             self.q_value_function = StateActionVFNN(nn_state_shape, nn_action_shape,
-                                                    self.layers_type, self.layers_features)
+                                                    self.layers_type, self.layers_features, 3)
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old)
@@ -50,13 +49,15 @@ class SemiGradientTD(BaseAgent):
         :return: action
         '''
         self.state = self.agentState(observation)
-        x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
-        x_new = torch.from_numpy(self.state).unsqueeze(0)
+        x_old = torch.from_numpy(self.prev_state).unsqueeze(0).float()
+        x_new = torch.from_numpy(self.state).unsqueeze(0).float()
         self.action = self.policy(x_new)
 
 
         target = reward + self.gamma * self.q_value_function(x_new, torch.from_numpy(self.action).unsqueeze(0))
         input = self.q_value_function(x_old, torch.from_numpy(self.prev_action).unsqueeze(0))
+
+        print("target:",target, "input:",input)
         loss = nn.MSELoss()(input, target)
 
         loss.backward()
@@ -86,7 +87,7 @@ class SemiGradientTD(BaseAgent):
         if np.random.rand() > self.epsilon or greedy:
             v = []
             for a in self.action_list:
-                v.append(self.q_value_function(agent_state, torch.from_numpy(a).unsqueeze(0)))
+                v.append(self.q_value_function(agent_state.float(), torch.from_numpy(a).unsqueeze(0)))
             action = self.action_list[np.argmax(v)]
         else:
             action = self.action_list[int(np.random.rand() * self.num_actions)]
@@ -98,8 +99,10 @@ class SemiGradientTD(BaseAgent):
 
     def updateWeights(self):
         for f in self.q_value_function.parameters():
+            print("grad:",f.grad.data)
             f.data.sub_(self.step_size * f.grad.data)
         self.q_value_function.zero_grad()
+
 
 
 

@@ -1,6 +1,6 @@
 from Test.Agents.BaseAgent import BaseAgent
-from Test.Networks.StateValueFunction import StateVFNN
-from Test.Networks.ModelNN.StateTransitionModel import StateTransitionModel
+from ValueFunction.StateValueFunction import StateVFNN
+from ModelNN.StateTransitionModel import StateTransitionModel
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,8 +21,8 @@ class BasePlannerAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.q_value_function = None
-        self.vf_layers_type = ['fc']
-        self.vf_layers_features = [32]
+        self.vf_layers_type = ['fc','fc']
+        self.vf_layers_features = [32,32]
         self.batch_size = params['batch_size']
 
         self.model = params['model']

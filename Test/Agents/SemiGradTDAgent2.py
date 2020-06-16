@@ -1,5 +1,5 @@
 from Test.Agents.BaseAgent import BaseAgent
-from Test.Networks.StateValueFunction import StateVFNN
+from ValueFunction.StateValueFunction import StateVFNN
 import numpy as np
 import torch
 import torch.nn as nn
@@ -70,8 +70,8 @@ class SemiGradientTD(BaseAgent):
         self.prev_state = self.state
         self.prev_action = self.action
 
-        self.writer.add_scalar('loss', loss.item())
-        self.writer.close()
+        # self.writer.add_scalar('loss', loss.item())
+        # self.writer.close()
         return self.prev_action
 
     def end(self, reward):

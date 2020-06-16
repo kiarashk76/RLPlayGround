@@ -9,14 +9,15 @@ from Test.Datasets.TransitionDataGrid import data_store
 class StateTransitionModel(nn.Module):
     def __init__(self, state_shape, action_shape, layers_type, layers_features, action_layer_num):
         super(StateTransitionModel, self).__init__()
-
         # state : Batch, W, H, Channels
         # action: Batch, A
         self.layers_type = layers_type
         self.layers = []
+
         linear_input_size = 0
         self.action_layer_num = action_layer_num
         state_size = state_shape[1] * state_shape[2] * state_shape[3]
+
         for i, layer in enumerate(layers_type):
             if layer == 'conv':
                 raise NotImplemented("convolutional layer is not implemented")
@@ -27,12 +28,14 @@ class StateTransitionModel(nn.Module):
                     action_shape_size = action_shape[1]
 
                 if i == 0:
-                    linear_input_size = state_shape[1] * state_shape[2] * state_shape[3] + action_shape_size
-                    self.layers.append(nn.Linear(linear_input_size, layers_features[i]))
+                    linear_input_size = state_size + action_shape_size
+                    layer = nn.Linear(linear_input_size, layers_features[i])
+                    self.add_module('hidden_layer_'+str(i), layer)
+                    self.layers.append(layer)
                 else:
-                    self.layers.append(nn.Linear(layers_features[i - 1] + action_shape_size, layers_features[i]))
-
-
+                    layer = nn.Linear(layers_features[i - 1] + action_shape_size, layers_features[i])
+                    self.add_module('hidden_layer_'+str(i), layer)
+                    self.layers.append(layer)
             else:
                 raise ValueError("layer is not defined")
 

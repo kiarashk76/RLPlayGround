@@ -1,13 +1,8 @@
 from ..Experiments.BaseExperiment import BaseExperiment
 from ..Envs.GridWorldNbN import GridWorldND
 from ..Envs.GridWorldBase import GridWorld
-from ..Agents.SemiGradTDAgent2 import SemiGradientTD
 from ..Agents.ForwardPlannerAgent import ForwardPlannerAgent
-from ..Agents.BackwardPlannerAgent import BackwardPlannerAgent
-from ..Agents.ForwardBackwardPlanningAgent import ForwardBackwardPlannerAgent
-from Test.Networks.ModelNN.StateTransitionModel import preTrainBackward
-
-from tempfile import TemporaryFile
+from ..Agents.SemiGradTDAgent import SemiGradientTD
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -36,7 +31,7 @@ class GridWorldExperiment(BaseExperiment):
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes > 0:
-            self.environment.render()
+            self.environment.render(values= None)
         if term:
             self.agent.end(reward)
             roat = (reward, obs, None, term)
@@ -112,6 +107,22 @@ class GridWorldExperiment(BaseExperiment):
         # function to show the plot
         plt.show()
 
+    def count_parameters(self, model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    def calculateValues(self):
+        states = self.environment.getAllStates()
+        actions = self.environment.getAllActions()
+        values = {}
+        for s in states:
+            pos = self.environment.stateToPos(s)
+            for a in actions:
+                s_torch = torch.from_numpy(s).unsqueeze(0)
+                a_torch = torch.from_numpy(a).unsqueeze(0)
+                values[(pos), tuple(a)] = round(
+                    self.agent.q_value_function(s_torch, a_torch).detach().item(),3)
+        return values
+
     def calculateModelError(self):
         sum = 0.0
         cnt = 0.0
@@ -167,28 +178,28 @@ class RunExperiment():
                             'obstacles_pos': [(3, 0), (3, 2), (0, 3), (2, 3), (3, 3), (4, 3), (6, 3), (3, 4), (3, 6)],
                             'rewards_pos': [(0, 6)], 'rewards_value': [3],
                             'terminals_pos': [(0, 6)], 'termination_probs': [1],
-                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)],
+                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)], # R, D, L, U
                             'neighbour_distance': 0,
                             'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
                             'transition_randomness': 0.0,
-                            'window_size': (255, 255),
+                            'window_size': (900, 900),
                             'aging_reward': -1
                             }
         env_size = 4
-        num_runs = 3
-        num_episode = 300
+        num_runs = 1
+        num_episode = 100
         max_step_each_episode = 200
 
         num_steps_list = np.zeros([num_runs, num_episode], dtype = np.int)
 
         for r in range(num_runs):
-            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.2})
+            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.0})
             # env = GridWorld(params = four_room_params)
             reward_function = env.rewardFunction
             goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
 
             # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
-            #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
+            #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.0,
             #                         'batch_size': 1,
             #                         'device': self.device})
 
@@ -212,10 +223,11 @@ class RunExperiment():
             #                               'device': self.device})
 
             experiment = GridWorldExperiment(agent, env)
-
             for e in range(num_episode):
                 print("starting episode ", e + 1)
                 experiment.runEpisode(max_step_each_episode)
+                print(experiment.count_parameters(agent.model))
+
                 # experiment.calculateModelError()
                 num_steps_list[r, e] = experiment.num_steps
             # experiment.draw_num_steps()

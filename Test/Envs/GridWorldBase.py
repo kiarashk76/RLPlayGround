@@ -1,6 +1,6 @@
 import collections
 import numpy as np
-# import pygame
+import pygame
 import random
 
 class GridWorld():
@@ -236,7 +236,9 @@ class GridWorld():
         elif state_type == 'nei_obs':
             raise NotImplementedError("neighbouring observation is not implemented")
 
-    def stateToPos(self, state, state_type):
+    def stateToPos(self, state, state_type= None):
+        if state_type is None:
+            state_type = self._state_mode
         if self._grid is None:
             raise NotImplementedError("grid is not defined")
 
@@ -262,7 +264,7 @@ class GridWorld():
         next_state = self.posToState(pos, state_type)
         return next_state
 
-    def render(self, grid= None):
+    def render(self, grid= None, values= None):
         if grid == None:
             grid = self._grid
 
@@ -270,7 +272,7 @@ class GridWorld():
         ground_color = [i * 255 for i in self._ground_color]
         obstacle_color = [i * 255 for i in self._obstacle_color]
         text_color = (240,240,10)
-
+        info_color = (200, 50, 50)
         # This sets the WIDTH and HEIGHT of each grid location
         WIDTH = int(self._window_size[0] / grid.shape[1])
         HEIGHT = int(self._window_size[1] / grid.shape[0])
@@ -295,7 +297,7 @@ class GridWorld():
         clock = pygame.time.Clock()
 
         font = pygame.font.Font('freesansbold.ttf', 20)
-
+        info_font = pygame.font.Font('freesansbold.ttf', 10)
         for i, pos in enumerate(self._rewards_pos):
             # create a text suface object, on which text is drawn on it.
             text = font.render(str(self._rewards_value[i]), True, text_color)
@@ -340,11 +342,58 @@ class GridWorld():
                                   (MARGIN + HEIGHT) * x + MARGIN,
                                   WIDTH,
                                   HEIGHT])
+                if color != obstacle_color and values is not None:
+                    # showing values only for 4 basic actions
+                    up_left_corner = [(MARGIN + WIDTH) * y + MARGIN,
+                                      (MARGIN + HEIGHT) * x + MARGIN]
+                    up_right_corner = [(MARGIN + WIDTH) * y + MARGIN + WIDTH,
+                                      (MARGIN + HEIGHT) * x + MARGIN]
+                    down_left_corner = [(MARGIN + WIDTH) * y + MARGIN,
+                                       (MARGIN + HEIGHT) * x + MARGIN + HEIGHT]
+                    down_right_corner = [(MARGIN + WIDTH) * y + MARGIN + WIDTH,
+                                        (MARGIN + HEIGHT) * x + MARGIN + HEIGHT]
+                    center = [(up_right_corner[0] + up_left_corner[0]) // 2,
+                              (up_right_corner[1] + down_right_corner[1]) // 2]
+
+                    pygame.draw.polygon(self.screen, info_color,
+                                        [up_left_corner, up_right_corner, center],
+                                        1)
+                    pygame.draw.polygon(self.screen, info_color,
+                                        [up_right_corner, down_right_corner, center],
+                                        1)
+                    pygame.draw.polygon(self.screen, info_color,
+                                        [down_right_corner, down_left_corner, center],
+                                        1)
+                    pygame.draw.polygon(self.screen, info_color,
+                                        [down_left_corner, up_left_corner, center],
+                                        1)
+                    for a in self.getAllActions():
+                        if tuple(a) == (0,1):
+                            right = info_font.render(str(values[(x,y), tuple(a)]), True, info_color)
+                        elif tuple(a) == (1,0):
+                            down = info_font.render(str(values[(x,y), tuple(a)]), True, info_color)
+                        elif tuple(a) == (0,-1):
+                            left = info_font.render(str(values[(x,y), tuple(a)]), True, info_color)
+                        elif tuple(a) == (-1,0):
+                            up = info_font.render(str(values[(x,y), tuple(a)]), True, info_color)
+                        else:
+                            raise ValueError("action cannot be rendered")
+                    self.screen.blit(left,
+                                     (up_left_corner[0], center[1])) #left
+                    self.screen.blit(right,
+                                     (up_right_corner[0] - right.get_rect().width, center[1]))  # right
+                    self.screen.blit(up,
+                                     (center[0] - up.get_rect().width // 2,
+                                      center[1] - up.get_rect().width))  # up
+                    self.screen.blit(down,
+                                     (center[0] - down.get_rect().width // 2,
+                                      center[1] + down.get_rect().width - down.get_rect().height))  # down
 
         # Limit to 60 frames per second
         clock.tick(60)
         for i in range(len(reward_text_list)):
             self.screen.blit(reward_text_list[i], reward_text_rect_list[i])
+
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
 
