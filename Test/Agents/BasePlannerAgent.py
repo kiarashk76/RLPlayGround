@@ -27,8 +27,8 @@ class BasePlannerAgent(BaseAgent):
 
         self.model = params['model']
         self.model_step_size = params['model_step_size']
-        self.model_layers_type = ['fc']
-        self.model_layers_features = [32]
+        self.model_layers_type = ['fc','fc']
+        self.model_layers_features = [32,32]
         self.planning_steps = 3
         self.buffer_size = 1
         self.buffer = []

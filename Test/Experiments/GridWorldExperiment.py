@@ -14,7 +14,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, params=None):
         if params is None:
-            params = {'render': False}
+            params = {'render': True}
         self._render_on = params['render']
         self.num_steps_lst = []
         super().__init__(agent, env)
@@ -198,16 +198,16 @@ class RunExperiment():
             reward_function = env.rewardFunction
             goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
 
-            # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
-            #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.0,
-            #                         'batch_size': 1,
-            #                         'device': self.device})
-
-            agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-                                    'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
-                                    'batch_size': 1, 'reward_function': reward_function,
-                                    'goal': goal, 'model_step_size': 0.05, 'model': None,
+            agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
+                                   'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.0,
+                                    'batch_size': 1,
                                     'device': self.device})
+
+            # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
+            #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.1,
+            #                         'batch_size': 1, 'reward_function': reward_function,
+            #                         'goal': goal, 'model_step_size': 0.05, 'model': None,
+            #                         'device': self.device})
 
             # agent = BackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
             #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
@@ -226,8 +226,6 @@ class RunExperiment():
             for e in range(num_episode):
                 print("starting episode ", e + 1)
                 experiment.runEpisode(max_step_each_episode)
-                print(experiment.count_parameters(agent.model))
-
                 # experiment.calculateModelError()
                 num_steps_list[r, e] = experiment.num_steps
             # experiment.draw_num_steps()

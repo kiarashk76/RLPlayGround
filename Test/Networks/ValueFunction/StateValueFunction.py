@@ -17,9 +17,13 @@ class StateVFNN(nn.Module):
             elif layer =='fc':
                 if i == 0:
                     linear_input_size = state_shape[1] * state_shape[2] * state_shape[3]
-                    self.layers.append(nn.Linear(linear_input_size, layers_features[i]))
+                    layer = nn.Linear(linear_input_size, layers_features[i])
+                    self.add_module('hidden_layer_'+str(i), layer)
+                    self.layers.append(layer)
                 else:
-                    self.layers.append(nn.Linear(layers_features[i-1], layers_features[i]))
+                    layer = nn.Linear(layers_features[i-1], layers_features[i])
+                    self.add_module('hidden_layer_'+str(i), layer)
+                    self.layers.append(layer)
             else:
                 raise ValueError("layer is not defined")
 
@@ -33,12 +37,9 @@ class StateVFNN(nn.Module):
                 raise NotImplemented("convolutional layer is not implemented")
             elif layer == 'fc':
                 if i == 0:
-                    s = state.flatten(start_dim= 1)
-                    x = s
-                    x = self.layers[i](x.float())
-                else:
-                    x = self.layers[i](x.float())
-
+                    x = state.flatten(start_dim= 1)
+                x = self.layers[i](x.float())
+                x = F.relu(x)
             else:
                 raise ValueError("layer is not defined")
         return self.head(x.float())
