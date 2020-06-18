@@ -1,29 +1,19 @@
 from Test.Envs.GridWorldBase import GridWorld
+from ..Envs.GridWorldNbN import GridWorldND
+
 from collections import namedtuple
 import csv
 from torch.utils.data import Dataset, DataLoader
 import random
 
 
-def data_store(train_test_split = 0.5):
+def data_store(env, train_test_split = 0.5):
     transition = namedtuple('transition', ['state', 'action', 'next_state', 'reward'])
 
-    empty_room_params_3d = {'size': (3, 3), 'init_state': (2, 0), 'state_mode': 'full_obs',
-                            'obstacles_pos': [],
-                            'rewards_pos': [(0, 2)], 'rewards_value': [1],
-                            'terminals_pos': [(0, 2)], 'termination_probs': [1],
-                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)],
-                            'neighbour_distance': 0,
-                            'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
-                            'transition_randomness': 0.0,
-                            'window_size': (255, 255),
-                            'aging_reward': -1
-                            }
-    env = GridWorld(params=empty_room_params_3d)
     all_states = env.getAllStates(state_type='full_obs')
     random.shuffle(all_states)
     train_states = all_states[0 : int(len(all_states) * train_test_split)]
-    train_states = all_states
+    train_states = all_states #  ***** change later, now we are training on all states****
 
     test_state = all_states[int(len(all_states) * train_test_split) : ]
     all_actions = env.getAllActions()
