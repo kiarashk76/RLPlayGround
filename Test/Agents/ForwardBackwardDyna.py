@@ -50,6 +50,7 @@ class ForwardBackwardDynaAgent(BaseDynaAgent):
             self._trainModel(self.model['forward'], state, action, next_state)
 
     def plan(self):
+        #todo: not efficiently implemented at all !!!
         self.model['forward']['plan_buffer'].append(self.state)
         for state in self._getStateFromBuffer(self.model['forward']):
             state_lst = [state]
