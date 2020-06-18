@@ -19,10 +19,11 @@ class BaseDynaAgent(BaseAgent):
         self.greedy = False
         self.epsilon = params['epsilon']
 
-        self.policy_values = 'qs' # 'q' or 's' or 'qs'
+        self.policy_values = 'q' # 'q' or 's' or 'qs'
         self.vf = {'q': dict(network=None,
                              layers_type=['fc', 'fc'],
                              layers_features=[64, 32],
+                             action_layer_num=3, # if one more than layer numbers => we will have num of actions output
                              batch_size=10,
                              step_size=0.01,
                              training=True),
@@ -31,7 +32,7 @@ class BaseDynaAgent(BaseAgent):
                              layers_features=[64, 32],
                              batch_size=5,
                              step_size=0.01,
-                             training=True)}
+                             training=False)}
 
         self.reward_function = params['reward_function']
         self.goal = params['goal']
@@ -84,11 +85,18 @@ class BaseDynaAgent(BaseAgent):
             v = []
             for i, action in enumerate(self.action_list):
                 if self.policy_values == 'q':
-                    v.append(self.vf['q']['network'](state_torch).detach()[0,i])
+                    action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0)
+                    if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
+                        v.append(self.vf['q']['network'](state_torch, action_onehot).detach()[0, i])
+                    else:
+                        v.append(self.vf['q']['network'](state_torch, action_onehot).detach())
                 elif self.policy_values == 's':
                     v.append(self.vf['s']['network'][i](state_torch).detach())
                 elif self.policy_values == 'qs':
-                    q = self.vf['q']['network'](state_torch).detach()[0,i]
+                    if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
+                        q = self.vf['q']['network'](state_torch, action_onehot).detach()[0, i]
+                    else:
+                        q = self.vf['q']['network'](state_torch, action_onehot).detach()
                     s = self.vf['s']['network'][i](state_torch).detach()
                     v.append( (q+s) /2)
                 else:
@@ -123,7 +131,8 @@ class BaseDynaAgent(BaseAgent):
         nn_state_shape = (self.vf['q']['batch_size'],) + self.prev_state.shape
         self.vf['q']['network'] = StateActionVFNN3(nn_state_shape, self.num_actions,
                                                  self.vf['q']['layers_type'],
-                                                 self.vf['q']['layers_features']).to(self.device)
+                                                 self.vf['q']['layers_features'],
+                                                 self.vf['q']['action_layer_num']).to(self.device)
 
     def init_s_value_function_network(self):
         nn_state_shape = (self.vf['s']['batch_size'],) + self.prev_state.shape
@@ -134,18 +143,23 @@ class BaseDynaAgent(BaseAgent):
                                                      self.vf['s']['layers_features']).to(self.device))
 
     def updateValueFunction(self, reward, x_old, x_new = None, prev_action=None, action=None):
+        if prev_action is None:
+            prev_action = self.prev_action
         if x_new is not None: # Not a terminal State
-            if prev_action is None:
-                prev_action = self.prev_action
             if action is None:
                 action = self.action
 
-            prev_action_index = self.getActionIndex(self.prev_action)
-            action_index = self.getActionIndex(self.action)
-
+            prev_action_index = self.getActionIndex(prev_action)
+            action_index = self.getActionIndex(action)
+            prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0)
+            action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0)
             if self.vf['q']['training']:
-                target = reward + self.gamma * self.vf['q']['network'](x_new).detach()[:, action_index]
-                input = self.vf['q']['network'](x_old)[:, prev_action_index]
+                if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
+                    target = reward + self.gamma * self.vf['q']['network'](x_new).detach()[:, action_index]
+                    input = self.vf['q']['network'](x_old)[:, prev_action_index]
+                else:
+                    target = reward + self.gamma * self.vf['q']['network'](x_new, action_onehot).detach()
+                    input = self.vf['q']['network'](x_old, prev_action_onehot)
                 assert target.shape == input.shape, 'target and input must have same shapes'
                 loss = nn.MSELoss()(input, target)
                 loss.backward()
@@ -165,11 +179,16 @@ class BaseDynaAgent(BaseAgent):
                     self.updateNetworkWeights(self.vf['s']['network'][prev_action_index],
                                               step_size)
         else : # terminal state
-            prev_action_index = self.getActionIndex(self.prev_action)
-
+            prev_action_index = self.getActionIndex(prev_action)
+            prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0)
             if self.vf['q']['training']:
-                target = torch.tensor(reward).unsqueeze(0)
-                input = self.vf['q']['network'](x_old)[:, prev_action_index]
+                if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
+                    target = torch.tensor(reward).unsqueeze(0)
+                    input = self.vf['q']['network'](x_old)[:, prev_action_index]
+                else:
+                    target = torch.tensor(reward).unsqueeze(0).unsqueeze(0)
+                    input = self.vf['q']['network'](x_old, prev_action_onehot)
+
                 assert target.shape == input.shape, 'target and input must have same shapes'
                 loss = nn.MSELoss()(input.float(), target.float())
                 loss.backward()

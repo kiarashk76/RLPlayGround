@@ -42,12 +42,15 @@ class StateTransitionModel(nn.Module):
 
         if self.action_layer_num == len(self.layers_type):
             self.head = nn.Linear(layers_features[-1] + num_actions, state_size)
+
         elif self.action_layer_num == len(self.layers_type) + 1:
             self.head = nn.Linear(layers_features[-1] , self.num_actions * state_size)
         else:
             self.head = nn.Linear(layers_features[-1], state_size)
 
-    def forward(self, state, action):
+    def forward(self, state, action = None):
+        if self.action_layer_num == len(self.layers) + 1 and action == None:
+            raise ValueError("action is not given")
         x = 0
         for i, layer in enumerate(self.layers_type):
             if layer == 'conv':

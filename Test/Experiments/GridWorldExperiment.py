@@ -235,17 +235,17 @@ class RunExperiment():
             reward_function = env.rewardFunction
             goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
 
-            # agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-            #                         'gamma':1.0, 'epsilon': 0.1,
-            #                         'reward_function': reward_function,
-            #                         'goal': goal,
-            #                         'device': self.device})
+            agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                    'gamma':1.0, 'epsilon': 0.1,
+                                    'reward_function': reward_function,
+                                    'goal': goal,
+                                    'device': self.device})
 
-            agent = ForwardBackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                   'gamma': 1.0, 'epsilon': 0.1,
-                                   'reward_function': reward_function,
-                                   'goal': goal,
-                                   'device': self.device})
+            # agent = ForwardBackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
+            #                        'gamma': 1.0, 'epsilon': 0.1,
+            #                        'reward_function': reward_function,
+            #                        'goal': goal,
+            #                        'device': self.device})
 
             # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
             #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
