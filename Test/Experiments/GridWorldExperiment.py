@@ -6,7 +6,7 @@ from ..Agents.BackwardPlannerAgent import BackwardPlannerAgent
 from ..Agents.SemiGradTDAgent import SemiGradientTD
 from ..Agents.BaseDynaAgent import BaseDynaAgent
 from ..Agents.ForwardBackwardDyna import ForwardBackwardDynaAgent
-from ModelNN.StateTransitionModel import preTrainBackward, preTrainForward2, preTrainForward
+from ..Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward2, preTrainForward
 
 import numpy as np
 import matplotlib.pyplot as plt

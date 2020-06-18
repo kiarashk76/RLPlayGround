@@ -1,7 +1,6 @@
 from Test.Agents.BaseAgent import BaseAgent
-from ValueFunction.StateActionValueFunction import StateActionVFNN3
-from ValueFunction.StateValueFunction import StateVFNN
-from ModelNN.StateTransitionModel import StateTransitionModel
+from ..Networks.ValueFunction.StateActionValueFunction import StateActionVFNN3
+from ..Networks.ValueFunction.StateValueFunction import StateVFNN
 import numpy as np
 import torch
 import torch.nn as nn

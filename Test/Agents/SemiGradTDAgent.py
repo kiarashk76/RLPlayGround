@@ -1,5 +1,5 @@
 from Test.Agents.BaseAgent import BaseAgent
-from ValueFunction.StateActionValueFunction import StateActionVFNN3
+from ..Networks.ValueFunction.StateActionValueFunction import StateActionVFNN3
 import numpy as np
 import torch
 import torch.nn as nn
