@@ -1,27 +1,28 @@
 from ..Experiments.BaseExperiment import BaseExperiment
-from ..Envs.GridWorldNbN import GridWorldND
 from ..Envs.GridWorldBase import GridWorld
-from ..Agents.ForwardPlannerAgent import ForwardPlannerAgent
-from ..Agents.BackwardPlannerAgent import BackwardPlannerAgent
-from ..Agents.SemiGradTDAgent import SemiGradientTD
 from ..Agents.BaseDynaAgent import BaseDynaAgent
+from ..Agents.RandomDynaAgent import RandomDynaAgent
 from ..Agents.ForwardBackwardDyna import ForwardBackwardDynaAgent
-from ..Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward2, preTrainForward
-
+from ..Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
+from .. import utils,config
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
+
+
+
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, params=None):
         if   params is None:
             params = {'render': False}
         self._render_on = params['render']
-        self.num_steps_lst = []
+        self.num_steps_to_goal_list = []
+        self.visit_counts = self.createVisitCounts(env)
+        self.num_samples = 0
         super().__init__(agent, env)
 
     def start(self):
@@ -33,10 +34,11 @@ class GridWorldExperiment(BaseExperiment):
 
     def step(self):
         (reward, s, term) = self.environment.step(self.last_action)
+        self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes > 0:
-            self.environment.render(values= self.calculateValues())
+            self.environment.render(values= self.calculateModelError()[1])
         if term:
             self.agent.end(reward)
             roat = (reward, obs, None, term)
@@ -49,21 +51,6 @@ class GridWorldExperiment(BaseExperiment):
         return roat
 
     def runEpisode(self, max_steps=0):
-            # printing each state action value
-            # for state, coord in zip(env.getAllStates(state_type= 'full_obs'),
-            #                         env.getAllStates(state_type= 'coord')):
-                # print("state: ", coord)
-                # state = torch.from_numpy(state).unsqueeze(0)
-                # for action in env.getAllActions():
-                #     action_index = self.agent.getActionIndex(action)
-                #     print(action, self.agent.q_value_function[action_index](state))
-
-                # if coord == (2, 0):
-                #     state = torch.from_numpy(state).unsqueeze(0)
-                #     for action in env.getAllActions():
-                #         action_index = self.agent.getActionIndex(action)
-                #         print(action, self.agent.q_value_function[action_index](state))
-
         is_terminal = False
         self.start()
 
@@ -72,7 +59,7 @@ class GridWorldExperiment(BaseExperiment):
             is_terminal = rl_step_result[3]
 
         self.num_episodes += 1
-        self.num_steps_lst.append(self.num_steps)
+        self.num_steps_to_goal_list.append(self.num_steps)
         print("num steps: ", self.num_steps)
         return is_terminal
 
@@ -80,7 +67,7 @@ class GridWorldExperiment(BaseExperiment):
         return s
 
     def recordTrajectory(self, s, a, r, t):
-        pass
+        self.updateVisitCounts(s, a)
 
     def agentPolicyEachState(self):
         all_states = self.environment.getAllStates()
@@ -90,43 +77,8 @@ class GridWorldExperiment(BaseExperiment):
             policy = self.agent.policy(agent_state, greedy= True)
             print(policy)
 
-    def draw_num_steps(self):
-        # x axis values
-        x = range(self.num_episodes)
-        # corresponding y axis values
-        y = self.num_steps_lst
-
-        plt.ylim(0, 200)
-
-        # plotting the points
-        plt.plot(x, y)
-
-        # naming the x axis
-        plt.xlabel('episode number')
-        # naming the y axis
-        plt.ylabel('number of steps')
-
-        # giving a title to my graph
-        plt.title('Learning')
-
-        # function to show the plot
-        plt.show()
-
     def count_parameters(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    def calculateValues2(self):
-        states = self.environment.getAllStates()
-        actions = self.environment.getAllActions()
-        values = {}
-        for s in states:
-            pos = self.environment.stateToPos(s)
-            for a in actions:
-                s_torch = torch.from_numpy(s).unsqueeze(0)
-                a_torch = torch.from_numpy(a).unsqueeze(0)
-                values[(pos), tuple(a)] = round(
-                    self.agent.q_value_function(s_torch, a_torch).detach().item(),3)
-        return values
 
     def calculateValues(self):
         states = self.environment.getAllStates()
@@ -140,41 +92,47 @@ class GridWorldExperiment(BaseExperiment):
                     self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
 
-    def calculateModelError2(self):
+    def calculateModelError(self, model):
         sum = 0.0
         cnt = 0.0
         states = self.environment.getAllStates()
         actions = self.environment.getAllActions()
-        for s in states:
-            for a in actions:
+        errors = {} # np.zeros([len(states), len(actions)])
+        for i, s in enumerate(states):
+            for j, a in enumerate(actions):
                 action_index = self.agent.getActionIndex(a)
                 true_state = self.environment.transitionFunction(s, a)
-                pred_state = self.agent.state_transition_model[action_index](torch.from_numpy(s).unsqueeze(0))
-                pred_state = pred_state[0].detach().numpy()
-                mse = (np.square(true_state - pred_state)).mean()
-                sum += mse
-                cnt += 1
-        avg = sum / cnt
-        return avg
-
-    def calculateModelError(self):
-        sum = 0.0
-        cnt = 0.0
-        states = self.environment.getAllStates()
-        actions = self.environment.getAllActions()
-        for s in states:
-            for a in actions:
-                action_index = self.agent.getActionIndex(a)
-                true_state = self.environment.transitionFunction(s, a)
+                pos = self.environment.stateToPos(s)
                 # pred_state = self.agent.model(torch.from_numpy(s).unsqueeze(0)).detach()[:,action_index]
                 # pred_state = self.agent.model(torch.from_numpy(s).unsqueeze(0),
                 #                               torch.from_numpy(a).unsqueeze(0)).detach()
-                pred_state = self.agent.getNextStateFromModel(s, a, self.agent.model['forward'])
+                pred_state = self.agent.getNextStateFromModel(s, a, model)
                 mse = (np.square(true_state - pred_state)).mean()
+
+                if ((pos), tuple(a)) in self.visit_counts:
+                    errors[(pos), tuple(a)] = round(mse, 3), self.visit_counts[(pos), tuple(a)]
+                else:
+                    errors[(pos), tuple(a)] = round(mse, 3), 0
+
                 sum += mse
                 cnt += 1
         avg = sum / cnt
-        return avg
+        return avg, errors
+
+    def updateVisitCounts(self, s, a):
+        if a is None:
+            return 0
+        pos = self.environment.stateToPos(s)
+        self.visit_counts[(pos), tuple(a)] += 1
+
+    def createVisitCounts(self, env):
+        visit_count = {}
+        for state in env.getAllStates():
+            for action in env.getAllActions():
+                pos = env.stateToPos(state)
+                visit_count[(pos, tuple(action))] = 0
+        return visit_count
+
 
 class RunExperiment():
     def __init__(self):
@@ -190,67 +148,44 @@ class RunExperiment():
         # corresponding y axis values
         y = num_steps_list
 
-        plt.ylim(0, 200)
-
-        # plotting the points
-        plt.plot(x, y)
-
-        # naming the x axis
-        plt.xlabel('episode number')
-        # naming the y axis
-        plt.ylabel('number of steps')
-
-        # giving a title to my graph
-        plt.title('Learning')
-
-        # function to show the plot
-        plt.savefig(name)
-        plt.show()
+        utils.draw_plot(x, y)
 
     def run_experiment(self):
-        # 0,6
-        four_room_params = {'size': (7, 7), 'init_state': (6, 0), 'state_mode': 'full_obs',
-                            'obstacles_pos': [(3, 0), (3, 2), (0, 3), (2, 3), (3, 3), (4, 3), (6, 3), (3, 4), (3, 6)],
-                            'rewards_pos': [(0, 6)], 'rewards_value': [3],
-                            'terminals_pos': [(0, 6)], 'termination_probs': [1],
-                            'actions': [(0, 1), (1, 0), (0, -1), (-1, 0)], # R, D, L, U
-                            'neighbour_distance': 0,
-                            'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
-                            'transition_randomness': 0.0,
-                            'window_size': (900, 900),
-                            'aging_reward': -1
-                            }
-        env_size = 4
-        num_runs = 3
-        num_episode = 200
-        max_step_each_episode = 200
+        num_runs = config.num_runs
+        num_episode = config.num_episode
+        max_step_each_episode = config.max_step_each_episode
         num_steps_list = np.zeros([num_runs, num_episode], dtype = np.int)
 
-        # env = GridWorldND(n=env_size, params={'transition_randomness': 0.0})
-        # pre_trained_model = preTrainForward(env)
+
+
+        env = GridWorld(params=config.empty_room_params)
+        pre_trained_model, visit_counts, pre_trained_plot_y, pre_trained_plot_x = preTrainForward(env)
 
         for r in range(num_runs):
-            env = GridWorldND(n = env_size, params = {'transition_randomness': 0.0})
-            # env = GridWorld(params = four_room_params)
+            env = GridWorld(params=config.empty_room_params)
             reward_function = env.rewardFunction
-            goal = env.posToState((0, env_size - 1), state_type = 'full_obs')
+            goal = env.posToState((0, config._n - 1), state_type = 'full_obs')
 
-            agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                    'gamma':1.0, 'epsilon': 0.1,
-                                    'reward_function': reward_function,
-                                    'goal': goal,
-                                    'device': self.device})
+            # agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
+            #                         'gamma':1.0, 'epsilon': 0.1,
+            #                         'reward_function': reward_function,
+            #                         'goal': goal,
+            #                         'device': self.device})
 
             # agent = ForwardBackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-            #                        'gamma': 1.0, 'epsilon': 0.1,
+            #                        'gamma': 1.0, 'epsilon': 1.0,
             #                        'reward_function': reward_function,
             #                        'goal': goal,
-            #                        'device': self.device})
+            #                        'device': self.device,
+            #                        'model': None})
 
-            # agent = SemiGradientTD({'action_list': np.asarray(env.getAllActions()),
-            #                        'gamma':1.0, 'step_size': 0.01, 'epsilon': 0.1,
-            #                         'batch_size': 1,
-            #                         'device': self.device})
+            agent = RandomDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                   'gamma': 1.0, 'epsilon': 1.0,
+                                   'reward_function': reward_function,
+                                   'goal': goal,
+                                   'device': self.device,
+                                   'model': None,
+                                    'training':True})
 
             # agent = ForwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
             #                         'gamma':1.0, 'step_size':0.01, 'epsilon': 0.04,
@@ -268,22 +203,47 @@ class RunExperiment():
             #                               'model_training': True,
             #                               'device': self.device})
 
-            # agent = ForwardBackwardPlannerAgent({'action_list': np.asarray(env.getAllActions()),
-            #                               'gamma': 1.0, 'step_size': 0.01, 'epsilon': 0.1,
-            #                               'batch_size': 1, 'reward_function': reward_function,
-            #                               'goal': goal, 'model_step_size': 0.05,
-            #                               'pre_trained_model': False,
-            #                               'device': self.device})
-
             experiment = GridWorldExperiment(agent, env)
+            model_error_list = []
+            model_error_num_samples = []
             for e in range(num_episode):
                 print("starting episode ", e + 1)
                 experiment.runEpisode(max_step_each_episode)
-                # print("model error: ", experiment.calculateModelError())
+                model_error = experiment.calculateModelError(agent.model['forward'])[0]
+                print("model error: ", model_error)
+                model_error_list.append(model_error)
+                model_error_num_samples.append(experiment.num_samples)
+                # for i in visit_counts:
+                #     print('agent, pretrain',experiment.visit_counts[i], visit_counts[i])
+
                 num_steps_list[r, e] = experiment.num_steps
+
+            utils.draw_grid((3, 3), (900, 900),
+                            state_action_values=experiment.calculateModelError(agent.model['forward'])[1],
+                            all_actions=env.getAllActions())
+
+            agent = RandomDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                     'gamma': 1.0, 'epsilon': 1.0,
+                                     'reward_function': reward_function,
+                                     'goal': goal,
+                                     'device': self.device,
+                                     'model': pre_trained_model,
+                                     'training': False})
+            utils.draw_grid((3, 3), (900, 900),
+                            state_action_values=experiment.calculateModelError(agent.model['forward'])[1],
+                            all_actions=env.getAllActions())
+
+
             # experiment.draw_num_steps()
+            utils.draw_grid((3, 3), (900, 900), state_action_values=visit_counts,
+                            all_actions=env.getAllActions())
+            utils.draw_grid((3, 3), (900, 900), state_action_values=experiment.visit_counts,
+                            all_actions=env.getAllActions())
+
         mean_steps = np.mean(num_steps_list, axis = 0)
 
-        np.save('backward.npy', num_steps_list)
 
+        # np.save('backward.npy', num_steps_list)
+        utils.draw_plot(pre_trained_plot_x, pre_trained_plot_y, xlabel='num_samples', ylabel='model_error')
+        utils.draw_plot(model_error_num_samples, model_error_list, xlabel='num_samples', ylabel='model_error', show=True)
         self.draw_num_steps(mean_steps)

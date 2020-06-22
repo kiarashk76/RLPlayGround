@@ -1,10 +1,12 @@
-from Test.Agents.BaseAgent import BaseAgent
+from BaseAgent import BaseAgent
 from ..Networks.ValueFunction.StateActionValueFunction import StateActionVFNN3
 from ..Networks.ValueFunction.StateValueFunction import StateVFNN
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from abc import abstractmethod
+from .. import config
 
 class BaseDynaAgent(BaseAgent):
     def __init__(self, params = {}):
@@ -16,23 +18,11 @@ class BaseDynaAgent(BaseAgent):
         self.actions_shape = self.action_list.shape[1:]
 
         self.gamma = params['gamma']
-        self.greedy = False
         self.epsilon = params['epsilon']
 
         self.policy_values = 'q' # 'q' or 's' or 'qs'
-        self.vf = {'q': dict(network=None,
-                             layers_type=['fc', 'fc'],
-                             layers_features=[64, 32],
-                             action_layer_num=3, # if one more than layer numbers => we will have num of actions output
-                             batch_size=10,
-                             step_size=0.01,
-                             training=True),
-                   's': dict(network=None,
-                             layers_type=['fc', 'fc'],
-                             layers_features=[64, 32],
-                             batch_size=5,
-                             step_size=0.01,
-                             training=False)}
+        self.vf = {'q': config.q_value_function,
+                   's': config.s_value_function}
 
         self.reward_function = params['reward_function']
         self.goal = params['goal']
@@ -48,7 +38,7 @@ class BaseDynaAgent(BaseAgent):
             self.init_s_value_function_network() # a separate state VF for each action
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
-        self.prev_action = self.policy(x_old, greedy = self.greedy)
+        self.prev_action = self.policy(x_old)
 
         self.initModel()
 
@@ -61,7 +51,7 @@ class BaseDynaAgent(BaseAgent):
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         x_new = torch.from_numpy(self.state).unsqueeze(0)
 
-        self.action = self.policy(x_new, greedy=self.greedy)
+        self.action = self.policy(x_new)
 
         self.updateValueFunction(reward, x_old, x_new)
 
@@ -80,8 +70,11 @@ class BaseDynaAgent(BaseAgent):
 
         self.updateValueFunction(reward, x_old, None)
 
-    def policy(self, state_torch, greedy = False):
-        if np.random.rand() > self.epsilon or greedy:
+        # self.trainModel(self.prev_state, self.action, self.state, terminal=True)
+
+
+    def policy(self, state_torch):
+        if np.random.rand() > self.epsilon:
             v = []
             for i, action in enumerate(self.action_list):
                 if self.policy_values == 'q':
@@ -112,9 +105,13 @@ class BaseDynaAgent(BaseAgent):
 
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
-        for f in network.parameters():
-            f.data.sub_(step_size * f.grad.data)
-        network.zero_grad()
+        optimizer = optim.SGD(network.parameters(), lr= step_size)
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # for f in network.parameters():
+        #     f.data.sub_(step_size * f.grad.data)
+        # network.zero_grad()
 
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
@@ -215,7 +212,7 @@ class BaseDynaAgent(BaseAgent):
                 self.updateNetworkWeights(self.vf['s']['network'][prev_action_index], step_size)
 
     @abstractmethod
-    def trainModel(self, state, action, next_state):
+    def trainModel(self, state, action, next_state, terminal=False):
         pass
 
     @abstractmethod

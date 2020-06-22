@@ -2,6 +2,8 @@ import collections
 import numpy as np
 import pygame
 import random
+import Test.config as config
+
 
 class GridWorld():
     def __init__(self, params=None):
@@ -296,7 +298,7 @@ class GridWorld():
         # Used to manage how fast the screen updates
         clock = pygame.time.Clock()
 
-        font = pygame.font.Font('freesansbold.ttf', 20)
+        font = pygame.font.Font('freesansbold.ttf', 15)
         info_font = pygame.font.Font('freesansbold.ttf', 10)
         for i, pos in enumerate(self._rewards_pos):
             # create a text suface object, on which text is drawn on it.
@@ -379,9 +381,9 @@ class GridWorld():
                         else:
                             raise ValueError("action cannot be rendered")
                     self.screen.blit(left,
-                                     (up_left_corner[0], center[1])) #left
+                                     (up_left_corner[0] + 0.5 * left.get_rect().width, center[1])) #left
                     self.screen.blit(right,
-                                     (up_right_corner[0] - right.get_rect().width, center[1]))  # right
+                                     (up_right_corner[0] - 1.5 * right.get_rect().width, center[1]))  # right
                     self.screen.blit(up,
                                      (center[0] - up.get_rect().width // 2,
                                       center[1] - up.get_rect().width))  # up

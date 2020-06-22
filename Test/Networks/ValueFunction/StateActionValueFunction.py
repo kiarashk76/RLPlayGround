@@ -178,8 +178,3 @@ class StateActionVFNN3(nn.Module): # last layer has number of actions' output
 
         x = self.head(x.float())
         return x
-
-        # if self.action_layer_num == len(self.layers_type) + 1:
-        #     return x.view((-1,) + (self.num_actions,) + state.shape[1:])  # -1 is for the batch size
-        # else:
-        #     return x.view(state.shape)  # -1 is for the batch size

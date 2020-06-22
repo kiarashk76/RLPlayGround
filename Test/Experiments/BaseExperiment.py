@@ -1,9 +1,3 @@
-from Test.Envs.GridWorldBase import GridWorld
-from Test.Agents.RandomAgent import RandomAgent
-import numpy as np
-
-# import pygame
-
 class BaseExperiment:
     def __init__(self, agent, env):
         self.environment = env

@@ -4,18 +4,18 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class ForwardBackwardDynaAgent(BaseDynaAgent):
+class RandomDynaAgent(BaseDynaAgent):
     def __init__(self, params):
-        super(ForwardBackwardDynaAgent, self).__init__(params)
+        super(RandomDynaAgent, self).__init__(params)
         self.model_batch_counter = 0
         self.model = {'forward': dict(network=params['model'],
-                                      step_size=0.2,
+                                      step_size=1.0,
                                       layers_type=['fc', 'fc'],
                                       layers_features=[256, 64],
                                       action_layer_number=3,
-                                      batch_size=4,
+                                      batch_size=1,
                                       halluc_steps=2,
-                                      training=True,
+                                      training=params['training'],
                                       plan_steps=0,
                                       plan_horizon=5,
                                       plan_buffer_size=5,
@@ -50,36 +50,7 @@ class ForwardBackwardDynaAgent(BaseDynaAgent):
             self._trainModel(self.model['forward'], state, action, next_state, terminal=terminal)
 
     def plan(self):
-        self.model['forward']['plan_buffer'].append(self.state)
-        for state in self._getStateFromBuffer(self.model['forward']):
-            state_lst = [state]
-            reward_lst = []
-            action_lst = []
-            for j in range(1, self.model['forward']['plan_horizon']):
-                action = self.forwardRolloutPolicy(state)
-                next_state = self.getNextStateFromModel(state, action,
-                                             self.model['forward'],
-                                             self.forwardRolloutPolicy,
-                                             h=j)
-                state_lst.append(next_state)
-                action_lst.append(action)
-                assert next_state[0].shape == self.goal.shape, 'goal and pred states have different shapes'
-                if np.array_equal(next_state, self.goal):
-                    reward_lst.append(10)
-                else:
-                    reward_lst.append(-1)
-            action_lst.append(self.forwardRolloutPolicy(next_state))
-
-            for i,state in enumerate(state_lst[:-self.model['forward']['plan_steps']]):
-                reward = 0
-                for r in range(len(reward_lst) - self.model['forward']['plan_steps'] + i - 2, i - 1, -1):
-                    reward *= self.gamma
-                    reward += reward_lst[r]
-                x_old = torch.from_numpy(state).float().unsqueeze(0)
-                x_new = torch.from_numpy(state_lst[i+self.model['forward']['plan_steps']])
-                prev_action = action_lst[i]
-                action = action_lst[i+self.model['forward']['plan_steps']]
-                self.updateValueFunction(reward, x_old, x_new,prev_action=prev_action, action=action)
+        return 0
 
     def getNextStateFromModel(self, state, action, model, rollout_policy=None, h=1):
         # get numpy state and action, returns torch h future next state
@@ -108,6 +79,8 @@ class ForwardBackwardDynaAgent(BaseDynaAgent):
 
     def _trainModel(self, model, state, action, next_state, h=0, terminal=False):
         # todo: add hallucination training
+
+
         x_old = torch.from_numpy(state).float().unsqueeze(0)
         x_new = torch.from_numpy(next_state).float().unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
@@ -129,3 +102,31 @@ class ForwardBackwardDynaAgent(BaseDynaAgent):
                 step_size = model['step_size'] / model['batch_size']
             self.updateNetworkWeights(model['network'], step_size)
 
+
+    def start(self, observation):
+        self.prev_state = self.agentState(observation)
+
+        x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
+        self.prev_action = self.policy(x_old)
+
+        self.initModel()
+
+        return self.prev_action
+
+    def step(self, reward, observation):
+        self.state = self.agentState(observation)
+
+        x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
+        x_new = torch.from_numpy(self.state).unsqueeze(0)
+
+        self.action = self.policy(x_new)
+
+        self.prev_state = self.state
+        self.prev_action = self.action # another option:** we can again call self.policy function **
+
+        self.trainModel(self.prev_state, self.action, self.state)
+
+        return self.prev_action
+
+    def end(self, reward):
+        pass
