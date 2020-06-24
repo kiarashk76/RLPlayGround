@@ -3,6 +3,11 @@ import torch
 import numpy as np
 import pygame
 
+from collections import namedtuple
+
+transition = namedtuple('transition', ['state', 'action', 'reward', 'next_state', 'time_step'])
+
+
 def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False):
 
     if ylim is not None:
@@ -128,10 +133,10 @@ def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None
                                 center[1]))  # right
                     screen.blit(up,
                                (center[0] - up.get_rect().width // 2,
-                                center[1] - 10 - up.get_rect().width))  # up
+                                center[1] - up.get_rect().width))  # up
                     screen.blit(down,
                                (center[0] - down.get_rect().width // 2,
-                                center[1] + 20 + down.get_rect().width - down.get_rect().height))  # down
+                                center[1] + down.get_rect().width - down.get_rect().height))  # down
 
         # Limit to 60 frames per second
         clock.tick(60)

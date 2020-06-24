@@ -266,6 +266,22 @@ class GridWorld():
         next_state = self.posToState(pos, state_type)
         return next_state
 
+    def transitionFunctionBackward(self, state, prev_action, state_type='full_obs', expectation=True):
+        if expectation:
+            pos = self.stateToPos(state, state_type)
+            possible_prev_states = []
+            for a in self.getAllActions():
+                next_pos = self.__transitionFunction(pos, a)
+                if next_pos == pos:
+                    possible_prev_states.append(self.posToState(pos, state_type))
+            possible_prev_states.append(self.posToState(tuple(np.subtract(pos, prev_action)), state_type))
+            expected_prev_state = 0
+            for s in possible_prev_states:
+                expected_prev_state += s
+            expected_prev_state /= len(possible_prev_states)
+            return expected_prev_state
+        else:
+            raise NotImplementedError("backward transition function other expectation hasn't been implemented")
     def render(self, grid= None, values= None):
         if grid == None:
             grid = self._grid

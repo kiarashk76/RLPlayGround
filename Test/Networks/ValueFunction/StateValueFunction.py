@@ -39,7 +39,7 @@ class StateVFNN(nn.Module):
                 if i == 0:
                     x = state.flatten(start_dim= 1)
                 x = self.layers[i](x.float())
-                x = F.relu(x)
+                x = torch.relu(x)
             else:
                 raise ValueError("layer is not defined")
         return self.head(x.float())

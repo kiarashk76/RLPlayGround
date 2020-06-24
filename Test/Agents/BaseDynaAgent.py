@@ -6,10 +6,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from abc import abstractmethod
-from .. import config
+from .. import config, utils
+import random
 
 class BaseDynaAgent(BaseAgent):
     def __init__(self, params = {}):
+        self.time_step = 0
+
         self.prev_state = None
         self.state = None
 
@@ -20,9 +23,23 @@ class BaseDynaAgent(BaseAgent):
         self.gamma = params['gamma']
         self.epsilon = params['epsilon']
 
+        self.transition_buffer = []
+        self.transition_buffer_size = 20
+
         self.policy_values = 'q' # 'q' or 's' or 'qs'
-        self.vf = {'q': config.q_value_function,
-                   's': config.s_value_function}
+        self.vf = {'q': dict(network=None,
+                    layers_type=['fc', 'fc'],
+                    layers_features=[64, 32],
+                    action_layer_num=3, # if one more than layer numbers => we will have num of actions output
+                    batch_size=10,
+                    step_size=0.01,
+                    training=True),
+                   's': dict(network=None,
+                    layers_type=['fc', 'fc'],
+                    layers_features=[64, 32],
+                    batch_size=5,
+                    step_size=0.01,
+                    training=False)}
 
         self.reward_function = params['reward_function']
         self.goal = params['goal']
@@ -45,6 +62,7 @@ class BaseDynaAgent(BaseAgent):
         return self.prev_action
 
     def step(self, reward, observation):
+        self.time_step += 1
         self.batch_counter += 1
         self.state = self.agentState(observation)
 
@@ -55,11 +73,15 @@ class BaseDynaAgent(BaseAgent):
 
         self.updateValueFunction(reward, x_old, x_new)
 
+        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
+                                                     self.state, self.time_step))
+        self.trainModel()
+        self.plan()
+
         self.prev_state = self.state
         self.prev_action = self.action # another option:** we can again call self.policy function **
 
-        self.trainModel(self.prev_state, self.action, self.state)
-        self.plan()
+
 
         return self.prev_action
 
@@ -145,7 +167,7 @@ class BaseDynaAgent(BaseAgent):
         if x_new is not None: # Not a terminal State
             if action is None:
                 action = self.action
-
+            assert x_old.shape == x_new.shape, 'x_old and x_new have different shapes'
             prev_action_index = self.getActionIndex(prev_action)
             action_index = self.getActionIndex(action)
             prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0)
@@ -211,8 +233,11 @@ class BaseDynaAgent(BaseAgent):
                                 (self.batch_counter % self.vf['s']['batch_size'])
                 self.updateNetworkWeights(self.vf['s']['network'][prev_action_index], step_size)
 
+    def getTransitionFromBuffer(self, n=1):
+        pass
+
     @abstractmethod
-    def trainModel(self, state, action, next_state, terminal=False):
+    def trainModel(self):
         pass
 
     @abstractmethod
@@ -222,3 +247,13 @@ class BaseDynaAgent(BaseAgent):
     @abstractmethod
     def initModel(self):
         pass
+
+    def updateTransitionBuffer(self, transition):
+        self.transition_buffer.append(transition)
+        if len(self.transition_buffer) > self.transition_buffer_size:
+            self.removeFromTransitionBuffer()
+
+    @abstractmethod
+    def removeFromTransitionBuffer(self):
+        self.transition_buffer.pop(0)
+

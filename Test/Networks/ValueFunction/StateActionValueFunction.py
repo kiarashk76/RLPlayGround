@@ -168,7 +168,7 @@ class StateActionVFNN3(nn.Module): # last layer has number of actions' output
                     a = action.flatten(start_dim=1)
                     x = torch.cat((x.float(), a.float()), dim=1)
                 x = self.layers[i](x.float())
-                x = F.relu(x)
+                x = torch.relu(x)
             else:
                 raise ValueError("layer is not defined")
 
