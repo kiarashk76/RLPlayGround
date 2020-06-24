@@ -18,7 +18,7 @@ class ForwardDynaAgent(BaseDynaAgent):
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=1,
-                                      plan_horizon=1,
+                                      plan_horizon=2,
                                       plan_buffer_size=10,
                                       plan_buffer=[])}
     def initModel(self):

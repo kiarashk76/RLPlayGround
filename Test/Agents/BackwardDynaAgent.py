@@ -18,11 +18,10 @@ class BackwardDynaAgent(BaseDynaAgent):
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=1,
-                                      plan_horizon=0,
+                                      plan_horizon=2,
                                       plan_buffer_size=10,
                                       plan_buffer=[])}
     def initModel(self):
-
         if self.model['backward']['network'] is None:
             self.model['backward']['network'] = \
                 STModel.StateTransitionModel(
@@ -84,11 +83,8 @@ class BackwardDynaAgent(BaseDynaAgent):
     def backwardRolloutPolicy(self, state):
         return self.policy(torch.from_numpy(state).unsqueeze(0))
 
-
-
     def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
         # todo: add hallucination training
-
         x_old = torch.from_numpy(state).float().unsqueeze(0)
         x_new = torch.from_numpy(next_state).float().unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
@@ -107,7 +103,6 @@ class BackwardDynaAgent(BaseDynaAgent):
         if len(self.transition_buffer) < n:
             n = len(self.transition_buffer)
         return random.choices(self.transition_buffer, k=n)
-
 
     def updatePlanningBuffer(self, model, state):
         model['plan_buffer'].append(state)
