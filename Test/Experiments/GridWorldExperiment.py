@@ -135,7 +135,8 @@ class GridWorldExperiment(BaseExperiment):
 
 
 class RunExperiment():
-    def __init__(self, model_type='forward',
+    def __init__(self, random_agent=True,
+                 model_type='forward',
                  pre_trained=True, use_pre_trained=False,
                  show_pre_trained_error_grid=False,
                  show_values_grid=False,
@@ -151,6 +152,7 @@ class RunExperiment():
         self.show_pre_trained_error_grid = show_pre_trained_error_grid
         self.show_values_grid = show_values_grid
         self.show_model_error_grid = show_model_error_grid
+        self.random_agent = random_agent
         print(self.device)
 
 
@@ -168,6 +170,7 @@ class RunExperiment():
             reward_function = env.rewardFunction
             goal = env.posToState((0, config._n - 1), state_type = 'full_obs')
 
+            # Pre-train the model
             if self.pre_trained:
                 if self.model_type == 'forward':
                     pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x = preTrainForward(
@@ -201,42 +204,50 @@ class RunExperiment():
                                                                                        env.transitionFunction)[1],
                                     all_actions=env.getAllActions())
 
-            if self.model_type == 'forward':
-                if self.use_pre_trained:
-                    agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                              'gamma': 1.0, 'epsilon': 0.01,
-                                              'reward_function': reward_function,
-                                              'goal': goal,
-                                              'device': self.device,
-                                              'model': pre_trained_model})
-                else:
-                    agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                              'gamma': 1.0, 'epsilon': 0.01,
-                                              'reward_function': reward_function,
-                                              'goal': goal,
-                                              'device': self.device,
-                                              'model': None})
-            elif self.model_type == 'backward':
-                if self.use_pre_trained:
-                    agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                               'gamma': 1.0, 'epsilon': 0.01,
-                                               'reward_function': reward_function,
-                                               'goal': goal,
-                                               'device': self.device,
-                                               'model': pre_trained_model})
-                else:
-                    agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                              'gamma': 1.0, 'epsilon': 0.01,
-                                              'reward_function': reward_function,
-                                              'goal': goal,
-                                              'device': self.device,
-                                              'model': None})
-            elif self.model_type == 'free':
-                agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                        'gamma':1.0, 'epsilon': 0.1,
-                                        'reward_function': reward_function,
-                                        'goal': goal,
-                                        'device': self.device})
+            if self.random_agent:
+                agent = RandomDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                           'gamma': 1.0, 'epsilon': 0.01,
+                                           'reward_function': reward_function,
+                                           'goal': goal,
+                                           'device': self.device,
+                                           'model': None})
+            else:
+                if self.model_type == 'forward':
+                    if self.use_pre_trained:
+                        agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'reward_function': reward_function,
+                                                  'goal': goal,
+                                                  'device': self.device,
+                                                  'model': pre_trained_model})
+                    else:
+                        agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'reward_function': reward_function,
+                                                  'goal': goal,
+                                                  'device': self.device,
+                                                  'model': None})
+                elif self.model_type == 'backward':
+                    if self.use_pre_trained:
+                        agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                                   'gamma': 1.0, 'epsilon': 0.01,
+                                                   'reward_function': reward_function,
+                                                   'goal': goal,
+                                                   'device': self.device,
+                                                   'model': pre_trained_model})
+                    else:
+                        agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'reward_function': reward_function,
+                                                  'goal': goal,
+                                                  'device': self.device,
+                                                  'model': None})
+                elif self.model_type == 'free':
+                    agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
+                                            'gamma':1.0, 'epsilon': 0.1,
+                                            'reward_function': reward_function,
+                                            'goal': goal,
+                                            'device': self.device})
 
             experiment = GridWorldExperiment(agent, env)
             model_error_list = []
@@ -291,7 +302,11 @@ class RunExperiment():
             pre_trained_plot_x_run_list = np.asarray(pre_trained_plot_x_run_list)
             mean_pre_trained_plot_y_run = np.mean(pre_trained_plot_y_run_list, axis=0)
             mean_pre_trained_plot_x_run = np.mean(pre_trained_plot_x_run_list, axis=0)
-            utils.draw_plot(mean_pre_trained_plot_x_run, mean_pre_trained_plot_y_run, xlabel='num_samples', ylabel='model_error')
+            utils.draw_plot(mean_pre_trained_plot_x_run, mean_pre_trained_plot_y_run,
+                            xlabel='num_samples', ylabel='model_error',
+                            label='pre_train_model')
 
-        utils.draw_plot(mean_model_error_num_samples, mean_model_error_list, xlabel='num_samples', ylabel='model_error', show=True)
+        utils.draw_plot(mean_model_error_num_samples, mean_model_error_list,
+                        xlabel='num_samples', ylabel='model_error', show=True,
+                        label='agent_model')
         utils.draw_plot(range(len(mean_steps_list)), mean_steps_list, xlabel='episode_num', ylabel='num_steps', show=True)

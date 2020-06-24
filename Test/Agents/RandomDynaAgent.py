@@ -16,7 +16,7 @@ class RandomDynaAgent(BaseDynaAgent):
                                       action_layer_number=3,
                                       batch_size=10,
                                       halluc_steps=2,
-                                      training=params['training'],
+                                      training=True,
                                       plan_steps=0,
                                       plan_horizon=5,
                                       plan_buffer_size=5,
@@ -64,7 +64,7 @@ class RandomDynaAgent(BaseDynaAgent):
             n = len(self.transition_buffer)
         return random.choices(self.transition_buffer, k=n)
 
-    def getNextStateFromModel(self, state, action, model, rollout_policy=None, h=1):
+    def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1):
         # get numpy state and action, returns torch h future next state
         x_old = torch.from_numpy(state).unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
@@ -79,7 +79,7 @@ class RandomDynaAgent(BaseDynaAgent):
         else:
             pred_state = pred_state.numpy()
             action = rollout_policy(pred_state)
-            return self.getNextStateFromModel(pred_state[0], action, model, rollout_policy, h = h-1)
+            return self.rolloutWithModel(pred_state[0], action, model, rollout_policy, h = h-1)
 
     def forwardRolloutPolicy(self, state):
         return self.policy(torch.from_numpy(state).unsqueeze(0))

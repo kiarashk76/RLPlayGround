@@ -8,7 +8,7 @@ from collections import namedtuple
 transition = namedtuple('transition', ['state', 'action', 'reward', 'next_state', 'time_step'])
 
 
-def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False):
+def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False, label=''):
 
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
@@ -26,8 +26,8 @@ def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, 
         plt.title(title)
 
     # plotting the points
-    plt.plot(x, y)
-
+    plt.plot(x, y, label=label)
+    plt.legend()
     if show:
         # # function to show the plot
         plt.show()
