@@ -17,7 +17,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, params=None):
         if   params is None:
-            params = {'render': True}
+            params = {'render': False}
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
@@ -37,8 +37,11 @@ class GridWorldExperiment(BaseExperiment):
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes > 95:
-            self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
-                                                                     self.environment.transitionFunctionBackward)[1])
+            pass
+            # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
+            #                                                          self.environment.transitionFunction)[1])
+            # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
+            #                                                         self.environment.transitionFunctionBackward)[1])
         if term:
             self.agent.end(reward)
             roat = (reward, obs, None, term)
