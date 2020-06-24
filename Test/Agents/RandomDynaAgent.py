@@ -62,9 +62,9 @@ class RandomDynaAgent(BaseDynaAgent):
         for sample in sample_transitions:
             state, action, reward, next_state, _ = sample
             if self.model['forward']['training']:
-                self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal)
+                self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal, type='forward')
             if self.model['backward']['training']:
-                self._calculateGradients(self.model['backward'], state, action, next_state, terminal=terminal)
+                self._calculateGradients(self.model['backward'], state, action, next_state, terminal=terminal, type='backward')
 
         if self.model['forward']['training']:
             step_size = self.model['forward']['step_size'] / len(sample_transitions)
@@ -81,7 +81,7 @@ class RandomDynaAgent(BaseDynaAgent):
             n = len(self.transition_buffer)
         return random.choices(self.transition_buffer, k=n)
 
-    def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1):
+    def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1, type='forward'):
         # get numpy state and action, returns torch h future next state
         x_old = torch.from_numpy(state).unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
@@ -106,18 +106,29 @@ class RandomDynaAgent(BaseDynaAgent):
         while len(model['plan_buffer']) > 0:
             yield model['plan_buffer'].pop()
 
-    def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
+    def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False, type='forward'):
         # todo: add hallucination training
 
         x_old = torch.from_numpy(state).float().unsqueeze(0)
         x_new = torch.from_numpy(next_state).float().unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
         action_index = self.getActionIndex(action)
-        if len(model['layers_type']) + 1 == model['action_layer_number']:
-            input = model['network'](x_old, action_onehot)[:, action_index]
+        if type == 'forward':
+            if len(model['layers_type']) + 1 == model['action_layer_number']:
+                input = model['network'](x_old, action_onehot)[:, action_index]
+            else:
+                input = model['network'](x_old, action_onehot)
+            target = x_new
+
+        elif type =='backward':
+            if len(model['layers_type']) + 1 == model['action_layer_number']:
+                input = model['network'](x_new, action_onehot)[:, action_index]
+            else:
+                input = model['network'](x_new, action_onehot)
+            target = x_old
+
         else:
-            input = model['network'](x_old, action_onehot)
-        target = x_new
+            raise ValueError("type is not defined")
 
         assert target.shape == input.shape, 'target and input must have same shapes'
         loss = nn.MSELoss()(input, target)

@@ -155,9 +155,9 @@ class GridWorldExperiment(BaseExperiment):
 
 
 class RunExperiment():
-    def __init__(self, random_agent=True,
-                 model_type='forward',
-                 pre_trained=True, use_pre_trained=False,
+    def __init__(self, random_agent=False,
+                 model_type='backward',
+                 pre_trained=False, use_pre_trained=False,
                  show_pre_trained_error_grid=False,
                  show_values_grid=False,
                  show_model_error_grid=False):
@@ -328,9 +328,10 @@ class RunExperiment():
             mean_pre_trained_plot_x_run = np.mean(pre_trained_plot_x_run_list, axis=0)
             utils.draw_plot(mean_pre_trained_plot_x_run, mean_pre_trained_plot_y_run,
                             xlabel='num_samples', ylabel='model_error',
-                            label='pre_train_model')
+                            label='pre_train_model', title=self.model_type)
 
         utils.draw_plot(mean_model_error_num_samples, mean_model_error_list,
                         xlabel='num_samples', ylabel='model_error', show=True,
-                        label='agent_model')
-        utils.draw_plot(range(len(mean_steps_list)), mean_steps_list, xlabel='episode_num', ylabel='num_steps', show=True)
+                        label='agent_model', title=self.model_type)
+        utils.draw_plot(range(len(mean_steps_list)), mean_steps_list, xlabel='episode_num', ylabel='num_steps',
+                        show=True, title=self.model_type)
