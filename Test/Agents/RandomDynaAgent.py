@@ -21,18 +21,18 @@ class RandomDynaAgent(BaseDynaAgent):
                                       plan_horizon=5,
                                       plan_buffer_size=5,
                                       plan_buffer=[]),
-                      'backward': dict(network=None,
-                                       step_size=0.05,
-                                       layers_type=['fc', 'fc'],
-                                       layers_features=[256, 64],
-                                       action_layer_number=2,
-                                       batch_size=10,
-                                       halluc_steps=2,
-                                       training= False,
-                                       plan_steps=2,
-                                       plan_horizon=5,
-                                       plan_buffer_size=5,
-                                       plan_buffer=[])}
+                      'backward': dict(network=params['model'],
+                                      step_size=0.1,
+                                      layers_type=['fc', 'fc'],
+                                      layers_features=[256, 64],
+                                      action_layer_number=3,
+                                      batch_size=10,
+                                      halluc_steps=2,
+                                      training=True,
+                                      plan_steps=0,
+                                      plan_horizon=5,
+                                      plan_buffer_size=5,
+                                      plan_buffer=[])}
     def initModel(self):
 
         if self.model['forward']['network'] is None:
@@ -45,16 +45,33 @@ class RandomDynaAgent(BaseDynaAgent):
                 self.model['forward']['action_layer_number'])
             self.model['forward']['network'].to(self.device)
 
+        if self.model['backward']['network'] is None:
+            self.model['backward']['network'] = \
+                STModel.StateTransitionModel(
+                self.prev_state.shape,
+                len(self.action_list),
+                self.model['backward']['layers_type'],
+                self.model['backward']['layers_features'],
+                self.model['backward']['action_layer_number'])
+            self.model['backward']['network'].to(self.device)
+
     def trainModel(self, terminal=False):
 
         sample_transitions = self.getTransitionFromBuffer(n=self.model['forward']['batch_size'])
+
         for sample in sample_transitions:
             state, action, reward, next_state, _ = sample
-            if self.model['forward']['training'] is True:
+            if self.model['forward']['training']:
                 self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal)
+            if self.model['backward']['training']:
+                self._calculateGradients(self.model['backward'], state, action, next_state, terminal=terminal)
 
-        step_size = self.model['forward']['step_size'] / len(sample_transitions)
-        self.updateNetworkWeights(self.model['forward']['network'], step_size)
+        if self.model['forward']['training']:
+            step_size = self.model['forward']['step_size'] / len(sample_transitions)
+            self.updateNetworkWeights(self.model['forward']['network'], step_size)
+        if self.model['backward']['training']:
+            step_size = self.model['backward']['step_size'] / len(sample_transitions)
+            self.updateNetworkWeights(self.model['backward']['network'], step_size)
 
     def plan(self):
         return 0

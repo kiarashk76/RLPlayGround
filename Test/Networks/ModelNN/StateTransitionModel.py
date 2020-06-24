@@ -133,7 +133,7 @@ def preTrainForward(env):
                                                    model_layers_features,
                                                    action_layer_num)
     num_samples = 0
-    max_samples = 1000
+    max_samples = 10000
     plot_y = []
     plot_x = []
     visit_count = createVisitCountsDict(env)
@@ -228,7 +228,7 @@ def preTrainBackward(env):
                                                   model_layers_features,
                                                   action_layer_num)
     num_samples = 0
-    max_samples = 1000
+    max_samples = 10000
     plot_y = []
     plot_x = []
     visit_count = createVisitCountsDict(env)

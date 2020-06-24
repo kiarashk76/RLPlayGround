@@ -9,9 +9,13 @@ from .. import utils,config
 import numpy as np
 import torch
 
+from Test.Datasets.TransitionDataGrid import data_store
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+
+
 
 
 class GridWorldExperiment(BaseExperiment):
@@ -118,6 +122,22 @@ class GridWorldExperiment(BaseExperiment):
         avg = sum / cnt
         return avg, errors
 
+    def calculateModelErrorWithData(self, model, test_data, type='forward'):
+        sum = 0.0
+        for data in test_data:
+            state, action, next_state, reward = data
+            if type == 'forward':
+                pred_state = self.agent.rolloutWithModel(state, action, model)
+                err = (np.square(next_state - pred_state)).mean()
+            elif type == 'backward':
+                pred_state = self.agent.rolloutWithModel(next_state, action, model)
+                err = (np.square(state - pred_state)).mean()
+            else:
+                raise ValueError('type is not defined')
+            sum += err
+        mse = sum / len(test_data)
+        return mse
+
     def updateVisitCounts(self, s, a):
         if a is None:
             return 0
@@ -141,9 +161,8 @@ class RunExperiment():
                  show_pre_trained_error_grid=False,
                  show_values_grid=False,
                  show_model_error_grid=False):
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        # Assuming that we are on a CUDA machine, this should print a CUDA device:
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if model_type != 'forward' and model_type != 'backward' and model_type != 'free':
             raise ValueError("model type not defined")
         self.model_type = model_type
@@ -153,6 +172,8 @@ class RunExperiment():
         self.show_values_grid = show_values_grid
         self.show_model_error_grid = show_model_error_grid
         self.random_agent = random_agent
+
+        # Assuming that we are on a CUDA machine, this should print a CUDA device:
         print(self.device)
 
 
@@ -169,6 +190,7 @@ class RunExperiment():
             env = GridWorld(params=config.empty_room_params)
             reward_function = env.rewardFunction
             goal = env.posToState((0, config._n - 1), state_type = 'full_obs')
+            train, test = data_store(env)
 
             # Pre-train the model
             if self.pre_trained:
@@ -259,9 +281,11 @@ class RunExperiment():
                 experiment.runEpisode(max_step_each_episode)
 
                 if self.model_type == 'forward':
-                    model_error = experiment.calculateModelError(agent.model['forward'], env.transitionFunction)[0]
+                    model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward')
+                    # model_error = experiment.calculateModelError(agent.model['forward'], env.transitionFunction)[0]
                 elif self.model_type == 'backward':
-                    model_error = experiment.calculateModelError(agent.model['backward'], env.transitionFunctionBackward)[0]
+                    model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test, type='backward')
+                    # model_error = experiment.calculateModelError(agent.model['backward'], env.transitionFunctionBackward)[0]
 
                 if self.model_type != 'free':
                     print("model error: ", model_error)

@@ -274,7 +274,9 @@ class GridWorld():
                 next_pos = self.__transitionFunction(pos, a)
                 if next_pos == pos:
                     possible_prev_states.append(self.posToState(pos, state_type))
-            possible_prev_states.append(self.posToState(tuple(np.subtract(pos, prev_action)), state_type))
+            prev_pos = tuple(np.subtract(pos, prev_action))
+            if self.checkPosInsideGrid(prev_pos) and prev_pos not in self._obstacles_pos:
+                possible_prev_states.append(self.posToState(prev_pos, state_type))
             expected_prev_state = 0
             for s in possible_prev_states:
                 expected_prev_state += s
