@@ -1,11 +1,11 @@
 # # experiment
-num_runs = 1
-num_episode = 200
-max_step_each_episode = 300
+num_runs = 3
+num_episode = 100
+max_step_each_episode = 50
 
 # # environment
 # empty room parameters
-_n = 3
+_n = 4
 empty_room_params = \
     {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'full_obs', #init_state (_n-1, 0)
     'obstacles_pos': [],
@@ -33,23 +33,5 @@ four_room_params = \
     'aging_reward': -1
     }
 
-# #agent
 
-# state action value function
-q_value_function=\
-    dict(network=None,
-    layers_type=['fc', 'fc'],
-    layers_features=[64, 32],
-    action_layer_num=3, # if one more than layer numbers => we will have num of actions output
-    batch_size=10,
-    step_size=0.01,
-    training=True)
-#state value function
-s_value_function=\
-    dict(network=None,
-    layers_type=['fc', 'fc'],
-    layers_features=[64, 32],
-    batch_size=5,
-    step_size=0.01,
-    training=False)
 

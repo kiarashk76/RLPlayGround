@@ -8,18 +8,18 @@ import random
 class ForwardDynaAgent(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardDynaAgent, self).__init__(params)
-        self.model_batch_counter = 0
+        # self.model_batch_counter = 0
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.1,
                                       layers_type=['fc', 'fc'],
                                       layers_features=[256, 64],
                                       action_layer_number=3,
-                                      batch_size=10,
+                                      batch_size=8,
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=1,
-                                      plan_horizon=2,
-                                      plan_buffer_size=10,
+                                      plan_horizon=1,
+                                      plan_buffer_size=1,
                                       plan_buffer=[])}
     def initModel(self):
 
@@ -55,11 +55,16 @@ class ForwardDynaAgent(BaseDynaAgent):
                                                    h=1)
                 assert next_state[0].shape == self.goal.shape, 'goal and pred states have different shapes'
                 reward = -1
-                if np.array_equal(next_state, self.goal):
+                if np.array_equal(next_state[0], self.goal):
                     reward = 10
                 x_old = torch.from_numpy(state).float().unsqueeze(0)
                 x_new = torch.from_numpy(next_state).float()
                 action = self.forwardRolloutPolicy(next_state)
+
+                # mb_update = self.vf['q']['network'](x_new).detach()[:, self.getActionIndex(action)]
+                # mf_update = self.vf['q']['network'](torch.from_numpy(self.state).unsqueeze(0)).detach()[:, self.getActionIndex(action)]
+                # print(mb_update," - ", mf_update," = ", mb_update-mf_update)
+                
                 self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
                 state = next_state[0]
                 prev_action = action

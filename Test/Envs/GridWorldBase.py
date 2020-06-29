@@ -113,8 +113,9 @@ class GridWorld():
         # update agent.pos and grid
         self._grid[self._agent_pos] = self._ground_color
         next_agent_pos = self.__transitionFunction(self._agent_pos, action)
-        if next_agent_pos not in self._obstacles_pos:
-            self._agent_pos = next_agent_pos
+        # if next_agent_pos not in self._obstacles_pos:
+        self._agent_pos = next_agent_pos
+
         self._grid[self._agent_pos] = self._agent_color
 
         # calculate the reward and termination of the transition
@@ -221,7 +222,7 @@ class GridWorld():
             # choose a random action
             action = self.getAllActions()[random.randint(0, len(self.getAllActions()) - 1)]
         next_pos = tuple(sum(x) for x in zip(pos, action))
-        if self.checkPosInsideGrid(next_pos):
+        if self.checkPosInsideGrid(next_pos) and next_pos not in self._obstacles_pos:
             return next_pos
         return pos
 
@@ -237,6 +238,12 @@ class GridWorld():
 
         elif state_type == 'nei_obs':
             raise NotImplementedError("neighbouring observation is not implemented")
+
+        elif state_type == 'coord':
+            return pos
+
+        else:
+            raise ValueError('state type not defined')
 
     def stateToPos(self, state, state_type= None):
         if state_type is None:
@@ -255,6 +262,11 @@ class GridWorld():
         elif state_type == 'nei_obs':
             raise NotImplementedError("neighbouring observation is not implemented")
 
+        elif state_type == 'coord':
+            return state
+        else:
+            raise ValueError('state type not defined')
+
     def rewardFunction(self, state, state_type= 'full_obs'):
         pos = self.stateToPos(state, state_type=state_type)
         reward = self.__rewardFunction(pos)
@@ -266,24 +278,78 @@ class GridWorld():
         next_state = self.posToState(pos, state_type)
         return next_state
 
-    def transitionFunctionBackward(self, state, prev_action, state_type='full_obs', expectation=True):
-        if expectation:
+    def fullTransitionFunction(self, state, action, state_type='full_obs'):
+        pos = self.stateToPos(state, state_type)
+        pos = self.__transitionFunction(pos, action)
+        is_terminal = self.__terminalFunction(pos)
+        reward = self.__rewardFunction(pos)
+        next_state = self.posToState(pos, state_type)
+        return next_state, is_terminal, reward
+
+    def transitionFunctionBackward(self, state, prev_action, state_type='full_obs', type='expectation'):
+        if type == 'expectation':
             pos = self.stateToPos(state, state_type)
             possible_prev_states = []
-            for a in self.getAllActions():
-                next_pos = self.__transitionFunction(pos, a)
-                if next_pos == pos:
-                    possible_prev_states.append(self.posToState(pos, state_type))
+
+            # come back to the same state with same action
+            next_pos = self.__transitionFunction(pos, prev_action)
+            if next_pos == pos:
+                possible_prev_states.append(self.posToState(pos, state_type))
+
+            # reverse the action
             prev_pos = tuple(np.subtract(pos, prev_action))
             if self.checkPosInsideGrid(prev_pos) and prev_pos not in self._obstacles_pos:
                 possible_prev_states.append(self.posToState(prev_pos, state_type))
             expected_prev_state = 0
             for s in possible_prev_states:
                 expected_prev_state += s
-            expected_prev_state /= len(possible_prev_states)
+
+            if len(possible_prev_states) > 0:
+                expected_prev_state /= len(possible_prev_states)
+            else:
+                expected_prev_state = None
             return expected_prev_state
+
+        elif type == 'sample':
+            pos = self.stateToPos(state, state_type)
+            possible_prev_states = []
+
+            # come back to the same state with same action
+            next_pos = self.__transitionFunction(pos, prev_action)
+            if next_pos == pos:
+                possible_prev_states.append(self.posToState(pos, state_type))
+
+            # reverse the action
+            prev_pos = tuple(np.subtract(pos, prev_action))
+            if self.checkPosInsideGrid(prev_pos) and prev_pos not in self._obstacles_pos:
+                possible_prev_states.append(self.posToState(prev_pos, state_type))
+            expected_prev_state = 0
+            for s in possible_prev_states:
+                expected_prev_state += s
+
+            if len(possible_prev_states) > 0:
+                expected_prev_state = random.choice(possible_prev_states)
+            else:
+                expected_prev_state = None
+            return expected_prev_state
+
         else:
             raise NotImplementedError("backward transition function other expectation hasn't been implemented")
+
+    def get_obstacles_pos(self):
+        return self._obstacles_pos
+
+    def mapActionsToChars(self, action):
+        if tuple(action) == (0, 1):
+            return 'R'
+        elif tuple(action) == (1, 0):
+            return 'D'
+        elif tuple(action) == (0, -1):
+            return 'L'
+        elif tuple(action) == (-1, 0):
+            return 'U'
+        else:
+            raise ValueError("action cannot be mapped to a char")
     def render(self, grid= None, values= None):
         if grid == None:
             grid = self._grid

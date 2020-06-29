@@ -14,13 +14,14 @@ class BackwardDynaAgent(BaseDynaAgent):
                                       layers_type=['fc', 'fc'],
                                       layers_features=[256, 64],
                                       action_layer_number=3,
-                                      batch_size=10,
+                                      batch_size=4,
                                       halluc_steps=2,
-                                      training=True,
-                                      plan_steps=1,
-                                      plan_horizon=2,
-                                      plan_buffer_size=10,
+                                      training=False,
+                                      plan_steps=0,
+                                      plan_horizon=1,
+                                      plan_buffer_size=1,
                                       plan_buffer=[])}
+        self.true_model = params['true_model']
     def initModel(self):
         if self.model['backward']['network'] is None:
             self.model['backward']['network'] = \
@@ -53,17 +54,29 @@ class BackwardDynaAgent(BaseDynaAgent):
                                                    self.model['backward'],
                                                    self.backwardRolloutPolicy,
                                                    h=1)
-                assert prev_state[0].shape == self.goal.shape, 'goal and pred states have different shapes'
-                reward = -1
-                if np.array_equal(state, self.goal):
-                    reward = 10
-                x_old = torch.from_numpy(prev_state).float()
-                x_new = torch.from_numpy(state).float().unsqueeze(0)
-                self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
-                action = prev_action
-                state = prev_state[0]
+                if prev_state is not None:
+                    assert prev_state.shape == self.goal.shape, 'goal and pred states have different shapes'
+                    reward = -1
+                    terminal = False
+                    if np.array_equal(state, self.goal):
+                        reward = 10
+                        terminal = True
+
+                    x_old = torch.from_numpy(prev_state).unsqueeze(0).float()
+                    x_new = torch.from_numpy(state).float().unsqueeze(0) if not terminal else None
+                    self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
+                    action = prev_action
+                    state = prev_state
 
     def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1):
+        # get numpy state and action, returns torch h future next state
+        pred_state = self.true_model(state, action, type='sample')
+        if h == 1:
+            return pred_state
+        else:
+            self.rolloutWithModel(pred_state, action, model, rollout_policy, h=h-1)
+
+    def rolloutWithModel2(self, state, action, model, rollout_policy=None, h=1):
         # get numpy state and action, returns torch h future next state
         x_old = torch.from_numpy(state).unsqueeze(0)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0)
@@ -81,7 +94,8 @@ class BackwardDynaAgent(BaseDynaAgent):
             return self.rolloutWithModel(pred_state[0], action, model, rollout_policy, h=h - 1)
 
     def backwardRolloutPolicy(self, state):
-        return self.policy(torch.from_numpy(state).unsqueeze(0))
+        return self.action_list[int(np.random.rand() * self.num_actions)]
+        # return self.policy(torch.from_numpy(state).unsqueeze(0))
 
     def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
         # todo: add hallucination training
@@ -105,7 +119,8 @@ class BackwardDynaAgent(BaseDynaAgent):
         return random.choices(self.transition_buffer, k=n)
 
     def updatePlanningBuffer(self, model, state):
-        model['plan_buffer'].append(state)
+        # model['plan_buffer'].append(state)
+        model['plan_buffer'].append(self.goal)
         if len(model['plan_buffer']) > model['plan_buffer_size']:
             self.removeFromPlanningBuffer(model)
 

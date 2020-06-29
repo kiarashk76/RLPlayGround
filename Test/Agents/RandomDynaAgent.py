@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
-
+from .. import utils
 class RandomDynaAgent(BaseDynaAgent):
     def __init__(self, params):
         super(RandomDynaAgent, self).__init__(params)
@@ -16,7 +16,7 @@ class RandomDynaAgent(BaseDynaAgent):
                                       action_layer_number=3,
                                       batch_size=10,
                                       halluc_steps=2,
-                                      training=True,
+                                      training=False,
                                       plan_steps=0,
                                       plan_horizon=5,
                                       plan_buffer_size=5,
@@ -146,6 +146,9 @@ class RandomDynaAgent(BaseDynaAgent):
     #
     # def step(self, reward, observation):
     #     self.state = self.agentState(observation)
+    #
+    #     self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
+    #                                                  self.state, self.time_step))
     #
     #     x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
     #     x_new = torch.from_numpy(self.state).unsqueeze(0)

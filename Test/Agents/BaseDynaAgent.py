@@ -24,14 +24,14 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 20
+        self.transition_buffer_size = 30
 
         self.policy_values = 'q' # 'q' or 's' or 'qs'
         self.vf = {'q': dict(network=None,
                     layers_type=['fc', 'fc'],
                     layers_features=[64, 32],
                     action_layer_num=3, # if one more than layer numbers => we will have num of actions output
-                    batch_size=10,
+                    batch_size=1,
                     step_size=0.01,
                     training=True),
                    's': dict(network=None,
@@ -53,24 +53,21 @@ class BaseDynaAgent(BaseAgent):
             self.init_q_value_function_network() # a general state action VF for all actions
         if self.vf['s']['network'] is None and self.vf['s']['training']:
             self.init_s_value_function_network() # a separate state VF for each action
+        self.initModel()
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         self.prev_action = self.policy(x_old)
 
-        self.initModel()
 
         return self.prev_action
 
     def step(self, reward, observation):
         self.time_step += 1
-        self.batch_counter += 1
         self.state = self.agentState(observation)
-
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
         x_new = torch.from_numpy(self.state).unsqueeze(0)
 
         self.action = self.policy(x_new)
-
         self.updateValueFunction(reward, x_old, x_new)
 
         self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
@@ -86,7 +83,6 @@ class BaseDynaAgent(BaseAgent):
         return self.prev_action
 
     def end(self, reward):
-        self.batch_counter += 1
 
         x_old = torch.from_numpy(self.prev_state).unsqueeze(0)
 
@@ -162,6 +158,7 @@ class BaseDynaAgent(BaseAgent):
                                                      self.vf['s']['layers_features']).to(self.device))
 
     def updateValueFunction(self, reward, x_old, x_new = None, prev_action=None, action=None):
+        self.batch_counter += 1
         if prev_action is None:
             prev_action = self.prev_action
         if x_new is not None: # Not a terminal State
@@ -232,6 +229,24 @@ class BaseDynaAgent(BaseAgent):
                     step_size = self.vf['s']['step_size'] /\
                                 (self.batch_counter % self.vf['s']['batch_size'])
                 self.updateNetworkWeights(self.vf['s']['network'][prev_action_index], step_size)
+
+    def getStateActionValue(self, x, action, type='q'):
+        action_index = self.getActionIndex(action)
+        action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0)
+
+        if type == 'q':
+            if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
+                value = self.vf['q']['network'](x).detach()[:, action_index]
+            else:
+                value = self.vf['q']['network'](x, action_onehot).detach()
+
+        elif type == 's':
+            value = self.vf['s']['network'][action_index](x).detach()
+
+        else:
+            raise ValueError('state action value type is not defined')
+
+        return value
 
     def getTransitionFromBuffer(self, n=1):
         pass

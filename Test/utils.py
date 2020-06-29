@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 import pygame
-
+import random
 from collections import namedtuple
 
 transition = namedtuple('transition', ['state', 'action', 'reward', 'next_state', 'time_step'])
@@ -32,7 +32,7 @@ def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, 
         # # function to show the plot
         plt.show()
 
-def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None):
+def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None, obstacles_pos=[]):
     ground_color = [255, 255, 255]
     # agent_color = [i * 255 for i in self._agent_color]
     # ground_color = [i * 255 for i in self._ground_color]
@@ -61,7 +61,7 @@ def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None
     clock = pygame.time.Clock()
 
     font = pygame.font.Font('freesansbold.ttf', 20)
-    info_font = pygame.font.Font('freesansbold.ttf', 20)
+    info_font = pygame.font.Font('freesansbold.ttf', int(60 / ((grid_size[0]+grid_size[1])/2)) )
 
 
     done = False
@@ -78,6 +78,8 @@ def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None
         # Draw the grid
         for x in range(grid_size[0]):
             for y in range(grid_size[1]):
+                if (x,y) in obstacles_pos:
+                    continue
                 color = ground_color
                 # if list(grid[x][y]) == self._agent_color:
                 #     color = agent_color
@@ -125,21 +127,59 @@ def draw_grid(grid_size, window_size, state_action_values=None, all_actions=None
                             up = info_font.render(str(state_action_values[(x,y), tuple(a)]), True, info_color)
                         else:
                             raise ValueError("action cannot be rendered")
+
+                    margin = 1
                     screen.blit(left,
-                               (up_left_corner[0] , # + 0.5 * left.get_rect().width
+                               (up_left_corner[0] + margin,
                                 center[1])) #left
                     screen.blit(right,
                                (up_right_corner[0] - right.get_rect().width,
                                 center[1]))  # right
                     screen.blit(up,
                                (center[0] - up.get_rect().width // 2,
-                                center[1] - up.get_rect().width))  # up
+                                up_right_corner[1] + margin)) # up
                     screen.blit(down,
                                (center[0] - down.get_rect().width // 2,
-                                center[1] + down.get_rect().width - down.get_rect().height))  # down
+                                down_left_corner[1] - down.get_rect().height - margin)) # down
 
         # Limit to 60 frames per second
         clock.tick(60)
 
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
+
+def reshape_for_grid(img):
+    # get a tenser as input with shape B, W, H, C and return a tensor with shape B, C, W, H
+    grid_img = torch.cat([img[:, :, :, 0], img[:, :, :, 1], img[:, :, :, 2]]).unsqueeze(0)
+    return grid_img
+
+def calculate_true_values(env, gamma, rounding = 3):
+    states = env.getAllStates()
+    actions = env.getAllActions()
+    values = {}
+    max_iter = 1000
+    for s in states:
+        for a in actions:
+            pos = env.stateToPos(s)
+            values[pos, tuple(a)] = 0
+    i = 0
+    while i < max_iter:
+        i += 1
+        random.shuffle(states)
+        for s in states:
+            s = env.stateToPos(s)
+            for a in actions:
+                next_state, is_terminal, reward = env.fullTransitionFunction(s, a, state_type='coord')
+                if not is_terminal:
+                    next_state_value = []
+                    for aa in actions:
+                        next_next_state, _, _ = env.fullTransitionFunction(next_state, aa, state_type='coord')
+                        next_state_value.append(reward + values[next_next_state, tuple(aa)])
+                    values[s, tuple(a)] = max(next_state_value)
+                else:
+                    values[s, tuple(a)] = reward
+
+    for i in values:
+        values[i] = round(values[i], rounding)
+    return values
+

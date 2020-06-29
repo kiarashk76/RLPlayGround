@@ -5,8 +5,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 import random
 from Test.Datasets.TransitionDataGrid import data_store
-import Test.utils as utils
-import Test.config as config
+import Test.utils as utils, config
+from torch.utils.tensorboard import SummaryWriter
+import torchvision
+
 class StateTransitionModel(nn.Module):
     def __init__(self, state_shape, num_actions, layers_type, layers_features, action_layer_num):
         super(StateTransitionModel, self).__init__()
@@ -122,16 +124,21 @@ def preTrainForward(env):
 
     train, test = data_store(env)
     model_layers_type = ['fc','fc']
-    model_layers_features = [256,64]
+    model_layers_features = [256, 64]
     action_layer_num = 3
     model_step_size = 1.0
-    batch_size = 10
+    batch_size = 4
+
+    writer = SummaryWriter()
+    xxx = False
 
     state_transition_model = StateTransitionModel(train[0].state.shape,
                                                    len(env.getAllActions()),
                                                    model_layers_type,
                                                    model_layers_features,
                                                    action_layer_num)
+
+
     num_samples = 0
     max_samples = 10000
     plot_y = []
@@ -159,6 +166,15 @@ def preTrainForward(env):
 
             target = x_new
             assert target.shape == input.shape, "target and input should have same shapes"
+
+            grid_target = torchvision.utils.make_grid(utils.reshape_for_grid(target))
+            grid_input = torchvision.utils.make_grid(utils.reshape_for_grid(input))
+            writer.add_image('true_images', grid_target, global_step=num_samples)
+            writer.add_image('pred_images', grid_input, global_step=num_samples)
+            if not xxx:
+                xxx = True
+                writer.add_graph(state_transition_model, input_to_model=[x_old, action_onehot])
+            writer.close()
 
             loss = nn.MSELoss()(input, target)
             loss.backward()
@@ -221,7 +237,7 @@ def preTrainBackward(env):
     model_layers_features = [256, 64]
     action_layer_num = 3
     model_step_size = 1.0
-    batch_size = 10
+    batch_size = 4
     state_transition_model = StateTransitionModel(train[0].state.shape,
                                                   len(env.getAllActions()),
                                                   model_layers_type,
