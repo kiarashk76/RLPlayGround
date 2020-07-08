@@ -24,7 +24,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if   params is None:
-            params = {'render': False}
+            params = {'render': True}
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
@@ -44,9 +44,10 @@ class GridWorldExperiment(BaseExperiment):
         self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
-        if self._render_on and self.num_episodes > 95:
-            self.environment.render()
-            # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
+        if self._render_on and self.num_episodes > 0:
+            # self.environment.render()
+            self.environment.render(values=self.calculateValues())
+            # self.environment.render(values= self.calculateModelError(self.agent.model['backward'],
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
             #                                                         self.environment.transitionFunctionBackward)[1])
@@ -387,25 +388,25 @@ class RunExperiment():
             utils.draw_plot(range(len(num_steps_run_list[r])), num_steps_run_list[r],
                           xlabel='episode_num', ylabel='num_steps', show=True,
                           label=self.model_type[i], title=self.model_type[i])
-            # if self.show_model_error_grid :
-            #     if self.model_type == 'forward':
-            #         utils.draw_grid((config._n, config._n), (900, 900),
-            #                         state_action_values=experiment.calculateModelError(agent.model['forward'],
-            #                                                                            env.transitionFunctionBackward)[1],
-            #                         all_actions=env.getAllActions(),
-            #                         obstacles_pos=env.get_obstacles_pos())
+            if self.show_model_error_grid[i] :
+                if self.model_type[i] == 'forward':
+                    utils.draw_grid((config._n, config._n), (900, 900),
+                                    state_action_values=experiment.calculateModelError(agent.model['forward'],
+                                                                                       env.transitionFunctionBackward)[1],
+                                    all_actions=env.getAllActions(),
+                                    obstacles_pos=env.get_obstacles_pos())
                     
-            #     elif self.model_type == 'backward':
-            #         utils.draw_grid((config._n, config._n), (900, 900),
-            #                         state_action_values=experiment.calculateModelError(agent.model['backward'],
-            #                                                                            env.transitionFunctionBackward)[1],
-            #                         all_actions=env.getAllActions(),
-            #                         obstacles_pos=env.get_obstacles_pos())
-            # if self.show_values_grid:
-            #     utils.draw_grid((config._n, config._n), (900, 900),
-            #                     state_action_values=experiment.calculateValues(),
-            #                     all_actions=env.getAllActions(),
-            #                     obstacles_pos=env.get_obstacles_pos())
+                elif self.model_type[i] == 'backward':
+                    utils.draw_grid((config._n, config._n), (900, 900),
+                                    state_action_values=experiment.calculateModelError(agent.model['backward'],
+                                                                                       env.transitionFunctionBackward)[1],
+                                    all_actions=env.getAllActions(),
+                                    obstacles_pos=env.get_obstacles_pos())
+            if self.show_values_grid[i]:
+                utils.draw_grid((config._n, config._n), (900, 900),
+                                state_action_values=experiment.calculateValues(),
+                                all_actions=env.getAllActions(),
+                                obstacles_pos=env.get_obstacles_pos())
 
 
           mean_steps_list.append(np.mean(num_steps_run_list, axis=0))

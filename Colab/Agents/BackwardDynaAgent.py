@@ -20,7 +20,7 @@ class BackwardDynaAgent(BaseDynaAgent):
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=0,
-                                      plan_horizon=3,
+                                      plan_horizon=100,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
         self.true_model = params['true_model']
@@ -56,15 +56,21 @@ class BackwardDynaAgent(BaseDynaAgent):
                 #                                    self.model['backward'],
                 #                                    self.backwardRolloutPolicy,
                 #                                    h=1)
-                true_prev_state = torch.from_numpy(self.true_model(state.cpu().numpy(), prev_action)).to(self.device)
+                true_prev_state = self.true_model(state.cpu().numpy(), prev_action, type='sample')
+                if true_prev_state is None:
+                    break
+                true_prev_state = torch.from_numpy(true_prev_state).to(self.device)
+
                 prev_state = true_prev_state #true_prev_state
                 
                 assert prev_state.shape == self.goal.shape, 'goal and pred states have different shapes'
                 reward = -1
+                is_terminal = False
                 if np.array_equal(state, self.goal):
                     reward = 10
+                    is_terminal = True
                 x_old = prev_state.float().to(self.device)
-                x_new = state.float().to(self.device)
+                x_new = state.float().to(self.device) if not is_terminal else None
                 self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
                 action = prev_action
                 state = prev_state
@@ -87,6 +93,8 @@ class BackwardDynaAgent(BaseDynaAgent):
             return self.rolloutWithModel(pred_state[0], action, model, rollout_policy, h=h - 1)
 
     def backwardRolloutPolicy(self, state):
+        random_action = self.action_list[int(np.random.rand() * self.num_actions)]
+        return random_action
         return self.policy(state)
 
     def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
