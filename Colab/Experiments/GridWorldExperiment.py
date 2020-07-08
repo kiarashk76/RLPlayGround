@@ -99,9 +99,9 @@ class GridWorldExperiment(BaseExperiment):
         for s in states:
             pos = self.environment.stateToPos(s)
             for a in actions:
-                s_torch = torch.from_numpy(s).unsqueeze(0)
-                values[(pos), tuple(a)] = round(
-                    self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
+                s_torch = self.agent.getStateRepresentation(torch.from_numpy(s))
+                values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a).item(), 3)
+                    # self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
 
     def calculateModelError(self, model, true_transition_function):
