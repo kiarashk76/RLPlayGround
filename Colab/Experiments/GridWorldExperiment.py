@@ -24,7 +24,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if   params is None:
-            params = {'render': True}
+            params = {'render': False}
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
@@ -222,7 +222,7 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['backward'],
+                 model_type=['free'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],

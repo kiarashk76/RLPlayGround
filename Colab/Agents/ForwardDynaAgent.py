@@ -67,7 +67,7 @@ class ForwardDynaAgent(BaseDynaAgent):
                 # mb_update = self.vf['q']['network'](x_new).detach()[:, self.getActionIndex(action)]
                 # mf_update = self.vf['q']['network'](torch.from_numpy(self.state).unsqueeze(0)).detach()[:, self.getActionIndex(action)]
                 # print(mb_update," - ", mf_update," = ", mb_update-mf_update)
-                self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
+                self.updateValueFunction(reward, x_old, prev_action, x_new= x_new, action=action)
                 state = next_state
                 prev_action = action
 

@@ -71,7 +71,7 @@ class BackwardDynaAgent(BaseDynaAgent):
                     is_terminal = True
                 x_old = prev_state.float().to(self.device)
                 x_new = state.float().to(self.device) if not is_terminal else None
-                self.updateValueFunction(reward, x_old, x_new, prev_action=prev_action, action=action)
+                self.updateValueFunction(reward, x_old, prev_action, x_new=x_new, action=action)
                 action = prev_action
                 state = prev_state
 

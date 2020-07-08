@@ -1,13 +1,13 @@
 
 
 # # experiment
-num_runs = 1
+num_runs = 5
 num_episode = 100
 max_step_each_episode = 50
 
 # # environment
 # empty room parameters
-_n = 5
+_n = 4
 empty_room_params = \
     {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'full_obs', #init_state (_n-1, 0)
     'obstacles_pos': [],
