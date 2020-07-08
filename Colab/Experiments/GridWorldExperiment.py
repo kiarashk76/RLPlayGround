@@ -2,18 +2,18 @@ import numpy as np
 import torch
 import os
 import itertools
-import utils,config
+import Colab.utils as utils, Colab.config as config
 import random
 import matplotlib.pyplot as plt
 
-from Experiments.BaseExperiment import BaseExperiment
-from Envs.GridWorldBase import GridWorld
-from Agents.BaseDynaAgent import BaseDynaAgent
-from Agents.RandomDynaAgent import RandomDynaAgent
-from Agents.ForwardDynaAgent import ForwardDynaAgent
-from Agents.BackwardDynaAgent import BackwardDynaAgent
-from Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
-from Datasets.TransitionDataGrid import data_store
+from Colab.Experiments.BaseExperiment import BaseExperiment
+from Colab.Envs.GridWorldBase import GridWorld
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+from Colab.Agents.RandomDynaAgent import RandomDynaAgent
+from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
+from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
+from Colab.Datasets.TransitionDataGrid import data_store
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 

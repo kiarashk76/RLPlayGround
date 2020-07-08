@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.optim as optim
 from abc import abstractmethod
 
-import config, utils
-from Agents.BaseAgent import BaseAgent
-from Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN3
-from Networks.ValueFunctionNN.StateValueFunction import StateVFNN
+import Colab.config as config, Colab.utils as utils
+from Colab.Agents.BaseAgent import BaseAgent
+from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN3
+from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 
 class BaseDynaAgent(BaseAgent):
     def __init__(self, params = {}):

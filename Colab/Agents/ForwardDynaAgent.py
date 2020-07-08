@@ -4,8 +4,8 @@ import torch.nn as nn
 import numpy as np
 import random
 
-from Agents.BaseDynaAgent import BaseDynaAgent
-import Networks.ModelNN.StateTransitionModel as STModel
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+import Colab.Networks.ModelNN.StateTransitionModel as STModel
 
 class ForwardDynaAgent(BaseDynaAgent):
     def __init__(self, params):

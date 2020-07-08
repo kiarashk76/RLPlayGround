@@ -3,9 +3,9 @@ import torch.nn as nn
 import numpy as np
 import random
 
-import utils
-from Agents.BaseDynaAgent import BaseDynaAgent
-import Networks.ModelNN.StateTransitionModel as STModel
+import Colab.utils as utils
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+import Colab.Networks.ModelNN.StateTransitionModel as STModel
 
 class RandomDynaAgent(BaseDynaAgent):
     def __init__(self, params):

@@ -3,7 +3,7 @@ import collections
 import numpy as np
 import pygame
 import random
-import config
+import Colab.config as config
 
 
 class GridWorld():

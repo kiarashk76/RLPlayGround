@@ -1,7 +1,7 @@
 
-from Agents.BaseDynaAgent import BaseDynaAgent
-import Networks.ModelNN.StateTransitionModel as STModel
-from Networks.ValueFunction.StateActionValueFunction import StateActionVFNN3
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+import Colab.Networks.ModelNN.StateTransitionModel as STModel
+from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN3
 
 import torch
 import torch.nn as nn

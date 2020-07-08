@@ -9,8 +9,9 @@ import random
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 
-from Datasets.TransitionDataGrid import data_store
-import utils
+from Colab.Datasets.TransitionDataGrid import data_store
+import Colab.utils as utils
+
 class StateTransitionModel(nn.Module):
     def __init__(self, state_shape, num_actions, layers_type, layers_features, action_layer_num):
         super(StateTransitionModel, self).__init__()
