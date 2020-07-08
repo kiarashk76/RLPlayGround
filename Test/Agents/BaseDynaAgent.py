@@ -1,4 +1,4 @@
-from BaseAgent import BaseAgent
+from ..Agents.BaseAgent import BaseAgent
 from ..Networks.ValueFunction.StateActionValueFunction import StateActionVFNN3
 from ..Networks.ValueFunction.StateValueFunction import StateVFNN
 import numpy as np
@@ -194,7 +194,7 @@ class BaseDynaAgent(BaseAgent):
                     step_size = self.vf['s']['step_size'] / self.vf['s']['batch_size']
                     self.updateNetworkWeights(self.vf['s']['network'][prev_action_index],
                                               step_size)
-        else : # terminal state
+        else: # terminal state
             prev_action_index = self.getActionIndex(prev_action)
             prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0)
             if self.vf['q']['training']:

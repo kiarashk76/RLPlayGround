@@ -39,7 +39,6 @@ class Dyna2Agent(BaseDynaAgent):
                         training=False)}
 
     def initModel(self):
-
         if self.model['forward']['network'] is None:
             self.model['forward']['network'] = \
                 STModel.StateTransitionModel(
@@ -67,7 +66,7 @@ class Dyna2Agent(BaseDynaAgent):
         self.updateNetworkWeights(self.model['forward']['network'], step_size)
 
     def plan(self):
-        self.updatePlanningBuffer(self.model['forward'], self.prev_state)
+        self.updatePlanningBuffer(self.model['forward'], self.prev_state) #should not have prev_state here
 
         for state in self.getStateFromPlanningBuffer(self.model['forward']):
             prev_action = self.forwardRolloutPolicy(state)
