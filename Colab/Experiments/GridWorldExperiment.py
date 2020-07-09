@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
-from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+# from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as BaseDynaAgent
+
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
@@ -348,6 +350,7 @@ class RunExperiment():
                                             'gamma':1.0, 'epsilon': 0.01,
                                             'reward_function': reward_function,
                                             'goal': goal,
+                                            'model': None,
                                             'device': self.device})
 
             experiment = GridWorldExperiment(agent, env, self.device)
