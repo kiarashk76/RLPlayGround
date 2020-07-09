@@ -391,6 +391,9 @@ class RunExperiment():
             utils.draw_plot(range(len(num_steps_run_list[r])), num_steps_run_list[r],
                           xlabel='episode_num', ylabel='num_steps', show=True,
                           label=self.model_type[i], title=self.model_type[i])
+
+            utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
+
             if self.show_model_error_grid[i] :
                 if self.model_type[i] == 'forward':
                     utils.draw_grid((config._n, config._n), (900, 900),

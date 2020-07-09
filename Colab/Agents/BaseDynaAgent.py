@@ -645,7 +645,7 @@ class BaseDynaAgent(BaseAgent):
                              step_size=0.01,
                              training=False)}
 
-        self.representation = dict(network=None, layers_type=['fc'], layers_features=[64], step_size=0.01)
+        self.representation = dict(network=None, layers_type=['fc'], layers_features=[32], step_size=0.01)
 
         self.reward_function = params['reward_function']
         self.device = params['device']
@@ -780,7 +780,6 @@ class BaseDynaAgent(BaseAgent):
             if self.vf['q']['training']:
                 target = reward + self.gamma * self.getStateActionValue(x_new, action, type='q', gradient=False)
                 input = self.getStateActionValue(x_old, prev_action, type='q', gradient=True)
-
                 assert target.shape == input.shape, 'target and input must have same shapes'
                 loss = nn.MSELoss()(input, target)
                 loss.backward()

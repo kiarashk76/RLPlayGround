@@ -9,6 +9,7 @@ import Colab.Networks.ModelNN.StateTransitionModelwError as Model
 class ForwardErrorDynaAgent(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardErrorDynaAgent, self).__init__(params)
+        self.model_pred_error = []
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.1,
                                       layers_type=['fc', 'fc'],
@@ -94,6 +95,9 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         x = next_state
         y = model_next_state.detach()
         acc = (np.square(x - y)).mean()
+        # print(acc , model_acc[0])
+        self.sum_pred_model_error += model_acc[0]
+        self.count_pred_model_error += 1
         loss1 = nn.MSELoss()(model_next_state, next_state)
         loss2 = nn.MSELoss()(model_acc[0], acc)
         loss = loss1 + loss2
@@ -116,3 +120,13 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
     def getStateFromPlanningBuffer(self, model):
         # todo: add prioritized sweeping
         return random.choices(model['plan_buffer'], k=1)
+
+
+    def start(self, observation):
+        self.sum_pred_model_error = 0
+        self.count_pred_model_error = 0
+        return super(ForwardErrorDynaAgent, self).start(observation)
+
+    def end(self, reward):
+        self.model_pred_error.append(self.sum_pred_model_error / self.count_pred_model_error)
+        return super(ForwardErrorDynaAgent, self).end(reward)
