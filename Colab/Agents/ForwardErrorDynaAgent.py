@@ -91,12 +91,10 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         next_state = next_state.unsqueeze(0).float().to(self.device)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         model_next_state, model_acc = model['network'](state, action_onehot)
-        x = next_state.detach()
+        x = next_state
         y = model_next_state.detach()
         acc = (np.square(x - y)).mean()
         loss1 = nn.MSELoss()(model_next_state, next_state)
-        print(model_acc[0])
-        print(acc)
         loss2 = nn.MSELoss()(model_acc[0], acc)
         loss = loss1 + loss2
         loss.backward()
