@@ -123,8 +123,8 @@ class BackwardErrorDynaAgent(BaseDynaAgent):
     def start(self, observation):
         self.sum_pred_model_error = 0
         self.count_pred_model_error = 0
-        return super(ForwardErrorDynaAgent, self).start(observation)
+        return super(BackwardErrorDynaAgent, self).start(observation)
 
     def end(self, reward):
         self.model_pred_error.append(self.sum_pred_model_error / self.count_pred_model_error)
-        return super(ForwardErrorDynaAgent, self).end(reward)
+        return super(BackwardErrorDynaAgent, self).end(reward)
