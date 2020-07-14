@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
-# from Colab.Agents.BaseDynaAgent import BaseDynaAgent
-from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as BaseDynaAgent
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+# from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as BaseDynaAgent
 
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
@@ -101,7 +101,7 @@ class GridWorldExperiment(BaseExperiment):
         for s in states:
             pos = self.environment.stateToPos(s)
             for a in actions:
-                s_torch = self.agent.getStateRepresentation(torch.from_numpy(s))
+                s_torch = self.agent.getStateRepresentation(torch.from_numpy(s).unsqueeze(0))
                 values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a).item(), 3)
                     # self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
@@ -347,7 +347,7 @@ class RunExperiment():
                                                   'true_model': env.transitionFunctionBackward})
                 elif self.model_type[i] == 'free':
                     agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                            'gamma':1.0, 'epsilon': 0.01,
+                                            'gamma':1.0, 'epsilon': 0.1,
                                             'reward_function': reward_function,
                                             'goal': goal,
                                             'model': None,
@@ -392,7 +392,7 @@ class RunExperiment():
                           xlabel='episode_num', ylabel='num_steps', show=True,
                           label=self.model_type[i], title=self.model_type[i])
 
-            utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
+            # utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
 
             if self.show_model_error_grid[i] :
                 if self.model_type[i] == 'forward':

@@ -147,19 +147,19 @@ class Dyna2Agent(BaseDynaAgent):
         # todo: add prioritized sweeping
         return random.choices(model['plan_buffer'], k=1)
 
-    def policy(self, state_torch):
-        state_torch = state_torch.unsqueeze(0)
+    def policy(self, state):
+        state = state.unsqueeze(0)
         if np.random.rand() > self.epsilon:
             v = []
             for i, action in enumerate(self.action_list):
                 if self.policy_values == 'q':
-                    v.append(self.getStateActionValue(state_torch, action, type= 'q')
-                             + self.getStateActionShortValue(state_torch, action, type='q'))
+                    v.append(self.getStateActionValue(state, action, type='q')
+                             + self.getStateActionShortValue(state, action, type='q'))
                 elif self.policy_values == 's':
-                    v.append(self.getStateActionValue(state_torch, action, type='s'))
+                    v.append(self.getStateActionValue(state, action, type='s'))
                 elif self.policy_values == 'qs':
-                    q = self.getStateActionValue(state_torch, action, type='q')
-                    s = self.getStateActionValue(state_torch, action, type='s')
+                    q = self.getStateActionValue(state, action, type='q')
+                    s = self.getStateActionValue(state, action, type='s')
                     v.append( (q+s) /2)
                 else:
                    raise ValueError('policy is not defined')

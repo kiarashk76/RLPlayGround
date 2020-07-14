@@ -6,7 +6,7 @@ import pygame
 import random
 from collections import namedtuple
 
-transition = namedtuple('transition', ['state', 'action', 'reward', 'next_state', 'time_step'])
+transition = namedtuple('transition', ['prev_state', 'prev_action', 'reward', 'state', 'action', 'is_terminal', 'time_step'])
 
 
 def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False, label=''):

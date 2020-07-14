@@ -19,7 +19,7 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=0,
-                                      plan_horizon=1,
+                                      plan_horizon=0,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
 
