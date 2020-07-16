@@ -10,7 +10,6 @@ transition = namedtuple('transition', ['prev_state', 'prev_action', 'reward', 's
 
 
 def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False, label=''):
-
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     if xlim is not None:

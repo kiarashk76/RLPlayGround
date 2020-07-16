@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -12,6 +11,8 @@ from Colab.Agents.BaseAgent import BaseAgent
 from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN4
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
+
+
 # class BaseDynaAgent(BaseAgent):
 #     def __init__(self, params = {}):
 #         self.time_step = 0
@@ -306,7 +307,6 @@ from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentat
 #     @abstractmethod
 #     def removeFromTransitionBuffer(self):
 #         self.transition_buffer.pop(0)
-
 
 
 # class BaseDynaAgent(BaseAgent):
@@ -612,9 +612,6 @@ from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentat
 #         self.transition_buffer.pop(0)
 
 
-
-
-
 class BaseDynaAgent(BaseAgent):
     def __init__(self, params={}):
         self.time_step = 0
@@ -688,7 +685,7 @@ class BaseDynaAgent(BaseAgent):
         self.action = self.policy(self.state)
 
         self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     self.state.detach(), self.action, False, self.time_step))
+                                                     self.state.detach().clone(), self.action, False, self.time_step))
 
         self.updateValueFunction()
         self.trainModel()
@@ -696,7 +693,7 @@ class BaseDynaAgent(BaseAgent):
 
         # reward, self.prev_state, self.prev_action, x_new = self.state, action = self.action
 
-        self.prev_state = self.getStateRepresentation(observation, gradient = True)
+        self.prev_state = self.getStateRepresentation(observation, gradient=True)
         self.prev_action = self.action  # another option:** we can again call self.policy function **
 
         return self.prev_action
@@ -719,7 +716,7 @@ class BaseDynaAgent(BaseAgent):
         if np.random.rand() <= self.epsilon:
             ind = int(np.random.rand() * self.num_actions)
             return self.action_list[ind]
-        state = state.detach()
+        state = state.detach().clone()
         v = []
         for i, action in enumerate(self.action_list):
             if self.policy_values == 'q':
@@ -735,8 +732,6 @@ class BaseDynaAgent(BaseAgent):
                 raise ValueError('policy is not defined')
         ind = np.argmax(v)
         return self.action_list[ind]
-
-
 
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
@@ -794,7 +789,7 @@ class BaseDynaAgent(BaseAgent):
             target = reward.float()
             if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                state = state.detach()
+                state = state.detach().clone()
                 target += self.gamma * self.getStateActionValue(state, action, type='q', gradient=False).float()
             input = self.getStateActionValue(prev_state, prev_action, type='q', gradient=True)
             assert target.shape == input.shape, 'target and input must have same shapes'
@@ -811,7 +806,7 @@ class BaseDynaAgent(BaseAgent):
             target = reward
             if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                state = state.detach()
+                state = state.detach().clone()
                 target += self.gamma * self.getStateActionValue(state, action, type='s', gradient=False)
 
             input = self.getStateActionValue(prev_state, prev_action, type='s', gradient=True)
@@ -824,22 +819,22 @@ class BaseDynaAgent(BaseAgent):
                 self.updateNetworkWeights(self.vf['s']['network'][prev_action_index],
                                           step_size)
 
-
     def getStateActionValue(self, state, action=None, type='q', gradient=False):
         if action is not None:
             action_index = self.getActionIndex(action)
             action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
 
+
             if type == 'q':
                 if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                    value = self.vf['q']['network'](state).detach()[:, action_index] if not gradient \
+                    value = self.vf['q']['network'](state).detach().clone()[:, action_index] if not gradient \
                         else self.vf['q']['network'](state)[:, action_index]
                 else:
-                    value = self.vf['q']['network'](state, action_onehot).detach() if not gradient \
+                    value = self.vf['q']['network'](state, action_onehot).detach().clone() if not gradient \
                         else self.vf['q']['network'](state, action_onehot)
 
             elif type == 's':
-                value = self.vf['s']['network'][action_index](state).detach() if not gradient \
+                value = self.vf['s']['network'][action_index](state).detach().clone() if not gradient \
                     else self.vf['s']['network'][action_index](state)
 
             else:
@@ -847,7 +842,7 @@ class BaseDynaAgent(BaseAgent):
             return value
         else:
             # state value (no gradient)
-            if gradient :
+            if gradient:
                 raise ValueError("cannot calculate the gradient for state values!")
             sum = 0
             for action in self.action_list:
@@ -856,12 +851,12 @@ class BaseDynaAgent(BaseAgent):
 
                 if type == 'q':
                     if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                        value = self.vf['q']['network'](state).detach()[:, action_index]
+                        value = self.vf['q']['network'](state).detach().clone()[:, action_index]
                     else:
-                        value = self.vf['q']['network'](state, action_onehot).detach()
+                        value = self.vf['q']['network'](state, action_onehot).detach().clone()
 
                 elif type == 's':
-                    value = self.vf['s']['network'][action_index](state).detach()
+                    value = self.vf['s']['network'][action_index](state).detach().clone()
 
                 else:
                     raise ValueError('state action value type is not defined')
@@ -877,14 +872,13 @@ class BaseDynaAgent(BaseAgent):
         :return: torch including batch -> [1, state_shape]
         '''
         observation = torch.from_numpy(observation).unsqueeze(0).to(self.device)
-        rep = self.representation['network'](observation).detach() if not gradient else self.representation['network'](observation)
+        rep = self.representation['network'](observation).detach().clone() if not gradient else self.representation['network'](
+            observation)
         return rep
         # return observation.flatten(start_dim=1)
 
     def updateStateRepresentation(self):
         self.updateNetworkWeights(self.representation['network'], self.representation['step_size'])
-
-
 
     def getTransitionFromBuffer(self, n=1):
         # both model and value function are using this buffer
