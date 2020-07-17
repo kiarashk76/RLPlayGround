@@ -13,13 +13,13 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.1,
                                       layers_type=['fc', 'fc'],
-                                      layers_features=[256, 64],
+                                      layers_features=[64, 32],
                                       action_layer_number=2,
                                       batch_size=8,
                                       halluc_steps=2,
                                       training=True,
                                       plan_steps=0,
-                                      plan_horizon=0,
+                                      plan_horizon=2,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
 
@@ -56,13 +56,14 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
                                                    self.forwardRolloutPolicy,
                                                    h=1)
                 assert next_state.shape == self.goal.shape, 'goal and pred states have different shapes'
-                reward = -1
-                if np.array_equal(next_state, self.goal):
-                    reward = 10
                 x_old = state.float().to(self.device)
                 x_new = next_state.float().to(self.device)
+                reward = -1
+                if self.isGoal(next_state):
+                    reward = 10
+                    x_new = None
                 action = self.forwardRolloutPolicy(next_state)
-                self.updateValueFunction(reward, x_old, prev_action, x_new= x_new, action=action)
+                # self.updateValueFunction(reward, x_old, prev_action, x_new= x_new, action=action)
                 state = next_state
                 prev_action = action
 
@@ -92,14 +93,19 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         next_state = next_state.unsqueeze(0).float().to(self.device)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         model_next_state, model_acc = model['network'](state, action_onehot)
+
         x = next_state
         y = model_next_state.detach()
+        # print(x)
+        # print(y)
         acc = (np.square(x - y)).mean()
-        # print(acc , model_acc[0])
+
+        # print(acc, model_acc[0])
         self.sum_pred_model_error += model_acc[0]
         self.count_pred_model_error += 1
         loss1 = nn.MSELoss()(model_next_state, next_state)
-        loss2 = nn.MSELoss()(model_acc[0], acc)
+        # loss2 = nn.MSELoss()(model_acc[0], acc)
+        loss2 = 0
         loss = loss1 + loss2
         loss.backward()
 
@@ -130,3 +136,9 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
     def end(self, reward):
         self.model_pred_error.append(self.sum_pred_model_error / self.count_pred_model_error)
         return super(ForwardErrorDynaAgent, self).end(reward)
+
+    def isGoal(self, state):
+        diff = np.abs(np.multiply(self.goal, state)).sum()
+        if diff > 0.8:
+            return True
+        return False

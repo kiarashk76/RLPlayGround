@@ -268,7 +268,7 @@ class GridWorld():
             raise NotImplementedError("neighbouring observation is not implemented")
 
         elif state_type == 'coord':
-            return state
+            return tuple(state)
         else:
             raise ValueError('state type not defined')
 

@@ -152,7 +152,7 @@ class ForwardDynaAgent(BaseDynaAgent):
         if self.model['forward']['network'] is None:
             self.model['forward']['network'] = \
                 STModel.StateTransitionModel(
-                self.getStateRepresentation(self.prev_state).shape,
+                self.prev_state.shape,
                 len(self.action_list),
                 self.model['forward']['layers_type'],
                 self.model['forward']['layers_features'],
@@ -196,7 +196,7 @@ class ForwardDynaAgent(BaseDynaAgent):
 
     def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1):
         # get torch state and action, returns torch h future next state
-        x_old = self.getStateRepresentation(state).float().unsqueeze(0).to(self.device)
+        x_old = state.float().unsqueeze(0).to(self.device)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         action_index = self.getActionIndex(action)
         if len(model['layers_type']) + 1 == model['action_layer_number']:
@@ -238,8 +238,8 @@ class ForwardDynaAgent(BaseDynaAgent):
     def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
         # todo: add hallucination training
         # state and next_state are tensor, action is numpy array
-        state = self.getStateRepresentation(state).unsqueeze(0).float().to(self.device)
-        next_state = self.getStateRepresentation(next_state).unsqueeze(0).float().to(self.device)
+        state = state.unsqueeze(0).float().to(self.device)
+        next_state = next_state.unsqueeze(0).float().to(self.device)
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         action_index = self.getActionIndex(action)
         if len(model['layers_type']) + 1 == model['action_layer_number']:

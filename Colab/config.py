@@ -1,7 +1,7 @@
 
 
 # # experiment
-num_runs = 10
+num_runs = 1
 num_episode = 100
 max_step_each_episode = 50
 
@@ -9,7 +9,7 @@ max_step_each_episode = 50
 # empty room parameters
 _n = 4
 empty_room_params = \
-    {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'full_obs', #init_state (_n-1, 0)
+    {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'coord', #init_state (_n-1, 0)
     'obstacles_pos': [],
     'rewards_pos': [(0, _n-1)], 'rewards_value': [10],
     'terminals_pos': [(0, _n-1)], 'termination_probs': [1],

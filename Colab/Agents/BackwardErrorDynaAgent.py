@@ -46,6 +46,7 @@ class BackwardErrorDynaAgent(BaseDynaAgent):
         self.updateNetworkWeights(self.model['backward']['network'], step_size)
 
     def plan(self):
+        print('heh')
         self.updatePlanningBuffer(self.model['backward'], self.prev_state)
         for state in self.getStateFromPlanningBuffer(self.model['backward']):
             action = self.policy(state.float().unsqueeze(0))
@@ -53,7 +54,7 @@ class BackwardErrorDynaAgent(BaseDynaAgent):
                 prev_action = self.backwardRolloutPolicy(state)
                 prev_state, acc = self.rolloutWithModel(state, prev_action,
                                                         self.model['backward'],
-                                                        self.backwardRolloutPolicy(),
+                                                        self.backwardRolloutPolicy(state),
                                                         h = 1)
                 reward = -1
                 is_terminal = False

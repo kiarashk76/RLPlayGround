@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
-# from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as BaseDynaAgent
+# from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as ForwardDynaAgent
 
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
@@ -18,9 +18,6 @@ from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTra
 from Colab.Datasets.TransitionDataGrid import data_store
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
-
-
 
 
 class GridWorldExperiment(BaseExperiment):
@@ -78,7 +75,7 @@ class GridWorldExperiment(BaseExperiment):
         return is_terminal
 
     def observationChannel(self, s):
-        return s
+        return np.asarray(s)
 
     def recordTrajectory(self, s, a, r, t):
         self.updateVisitCounts(s, a)
@@ -187,14 +184,15 @@ class GridWorldExperiment(BaseExperiment):
         for data in test_data:
             state, action, next_state, reward = data
             if type == 'forward':
-                next_state = torch.from_numpy(next_state).to(self.device)
-                true_state = torch.from_numpy(true_transition_function(state, action)).to(self.device)
+                next_state = torch.from_numpy(np.asarray(next_state)).to(self.device)
+                true_state = torch.from_numpy(np.asarray(true_transition_function(state, action, state_type='coord'))).to(self.device)
                 # if not torch.all(torch.eq(next_state, true_state):
                 #   print("an")
-                pred_state = self.agent.rolloutWithModel(torch.from_numpy(state).to(self.device), action, model)
+                pred_state = self.agent.rolloutWithModel(torch.from_numpy(np.asarray(state)).to(self.device), action, model)
+
                 assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
                 err = torch.mean((next_state - pred_state) ** 2)
-
+                print(err, state, action, next_state, pred_state)
             elif type == 'backward':
                 state = torch.from_numpy(state).to(self.device)
                 pred_state = self.agent.rolloutWithModel(torch.from_numpy(next_state).to(self.device), action, model)
@@ -224,7 +222,7 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['free'],
+                 model_type=['forward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],
@@ -265,7 +263,7 @@ class RunExperiment():
           for r in range(num_runs):
             env = GridWorld(params=config.empty_room_params)
             reward_function = env.rewardFunction
-            goal = env.posToState((0, config._n - 1), state_type = 'full_obs')
+            goal = np.asarray(env.posToState((0, config._n - 1), state_type = 'coord'))
             train, test = data_store(env)
             # Pre-train the model
             if self.pre_trained[i]:
@@ -322,7 +320,7 @@ class RunExperiment():
                                                   'true_model': env.transitionFunction})
                     else:
                         agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'gamma': 1.0, 'epsilon': 1.0,
                                                   'reward_function': reward_function,
                                                   'goal': goal,
                                                   'device': self.device,
@@ -339,7 +337,7 @@ class RunExperiment():
                                                    'true_model': env.transitionFunctionBackward})
                     else:
                         agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'gamma': 1.0, 'epsilon': 0.2,
                                                   'reward_function': reward_function,
                                                   'goal': goal,
                                                   'device': self.device,
@@ -347,7 +345,7 @@ class RunExperiment():
                                                   'true_model': env.transitionFunctionBackward})
                 elif self.model_type[i] == 'free':
                     agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                            'gamma':1.0, 'epsilon': 0.1,
+                                            'gamma':1.0, 'epsilon': 0.01,
                                             'reward_function': reward_function,
                                             'goal': goal,
                                             'model': None,
@@ -364,7 +362,8 @@ class RunExperiment():
                 experiment.runEpisode(max_step_each_episode)
 
                 if self.model_type[i] == 'forward':
-                    model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward', true_transition_function= env.transitionFunction)
+                    pass
+                    # model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward', true_transition_function= env.transitionFunction)
                     # model_error, model_val_error = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, vf=agent.getStateActionValue)
                     # model_error2 = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, n=10)
 
@@ -373,12 +372,15 @@ class RunExperiment():
                     # model_error = experiment.calculateModelError(agent.model['backward'], env.transitionFunctionBackward)[0]
 
                 if self.model_type[i] != 'free':
-                    print("model error: ", model_error)
-                    model_error_list.append(model_error)
+                    # print("model error: ", model_error)
+                    # model_error_list.append(model_error)
                     # model_val_error_list.append(model_val_error)
                     model_error_num_samples.append(experiment.num_samples)
 
                 num_steps_run_list[r, e] = experiment.num_steps
+
+            model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward',
+                                                                 true_transition_function=env.transitionFunction)
 
             model_error_run_list.append(model_error_list)
             # model_val_error_run_list.append(model_val_error_list)
@@ -392,13 +394,13 @@ class RunExperiment():
                           xlabel='episode_num', ylabel='num_steps', show=True,
                           label=self.model_type[i], title=self.model_type[i])
 
-            # utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
+            utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
 
             if self.show_model_error_grid[i] :
                 if self.model_type[i] == 'forward':
                     utils.draw_grid((config._n, config._n), (900, 900),
                                     state_action_values=experiment.calculateModelError(agent.model['forward'],
-                                                                                       env.transitionFunctionBackward)[1],
+                                                                                       env.transitionFunction)[1],
                                     all_actions=env.getAllActions(),
                                     obstacles_pos=env.get_obstacles_pos())
                     
