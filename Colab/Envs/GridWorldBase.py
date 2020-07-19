@@ -91,7 +91,7 @@ class GridWorld():
         self._grid[self._agent_pos] = self._agent_color
 
         if self._state_mode == 'coord':
-            self._state = self._agent_pos  # a tuple of the agent's position
+            self._state = np.asarray(self._agent_pos)  # a tuple of the agent's position
 
         elif self._state_mode == 'full_obs':
             self._state = np.copy(self._grid)  # a np.array of the full grid
@@ -125,7 +125,7 @@ class GridWorld():
 
         # calculate the state
         if self._state_mode == 'coord':
-            self._state = self._agent_pos  # a tuple of the agent's position
+            self._state = np.asarray(self._agent_pos)  # a tuple of the agent's position
 
         elif self._state_mode == 'full_obs':
             self._state = np.copy(self._grid)  # a np.array of the full grid
@@ -149,7 +149,9 @@ class GridWorld():
                     agent_pos_list.append((x,y))
 
         if state_type == 'coord':
-            return agent_pos_list
+            for pos in agent_pos_list:
+                state_list.append(np.asarray(pos))
+            return state_list
 
         elif state_type == 'full_obs':
             for pos in agent_pos_list:
@@ -243,7 +245,7 @@ class GridWorld():
             raise NotImplementedError("neighbouring observation is not implemented")
 
         elif state_type == 'coord':
-            return pos
+            return np.asarray(pos)
 
         else:
             raise ValueError('state type not defined')
@@ -268,7 +270,7 @@ class GridWorld():
             raise NotImplementedError("neighbouring observation is not implemented")
 
         elif state_type == 'coord':
-            return state
+            return tuple(state)
         else:
             raise ValueError('state type not defined')
 
