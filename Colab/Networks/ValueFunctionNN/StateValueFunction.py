@@ -13,12 +13,13 @@ class StateVFNN(nn.Module):
         super(StateVFNN, self).__init__()
         self.layers_type = layers_type
         self.layers = []
+        linear_input_size = state_shape[1]
+
         for i, layer in enumerate(layers_type):
             if layer == 'conv':
                 raise NotImplemented("convolutional layer is not implemented")
             elif layer =='fc':
                 if i == 0:
-                    linear_input_size = state_shape[1] * state_shape[2] * state_shape[3]
                     layer = nn.Linear(linear_input_size, layers_features[i])
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)

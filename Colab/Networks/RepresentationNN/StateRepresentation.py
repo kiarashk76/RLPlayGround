@@ -8,13 +8,22 @@ class StateRepresentation(nn.Module): # action inserted to a layer
         super(StateRepresentation, self).__init__()
         self.layers_type = layers_type
         self.layers = []
+        if len(state_shape) == 3:
+            linear_input_size = state_shape[0] * state_shape[1] * state_shape[2]
+        elif len(state_shape) == 1:
+            linear_input_size = state_shape[0]
+        else:
+            raise ValueError('representation not defined')
+
+        if len(self.layers_type) == 0:
+            return None
 
         for i, layer in enumerate(layers_type):
             if layer == 'conv':
                 raise NotImplemented("convolutional layer is not implemented")
             elif layer =='fc':
                 if i == 0:
-                    linear_input_size = state_shape[0] * state_shape[1] * state_shape[2]
+
                     layer = nn.Linear(linear_input_size, layers_features[i])
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
@@ -27,13 +36,15 @@ class StateRepresentation(nn.Module): # action inserted to a layer
 
 
     def forward(self, state):
+        if len(self.layers_type) == 0:
+            return state.flatten(start_dim=1)
         x = 0
         for i, layer in enumerate(self.layers_type):
             if layer == 'conv':
                 raise NotImplemented("convolutional layer is not implemented")
             elif layer == 'fc':
                 if i == 0:
-                    x = state.flatten(start_dim= 1)
+                    x = state.flatten(start_dim=1)
                 x = self.layers[i](x.float())
                 x = torch.relu(x)
             else:

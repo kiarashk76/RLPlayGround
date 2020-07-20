@@ -81,7 +81,7 @@ class GridWorldExperiment(BaseExperiment):
         all_states = self.environment.getAllStates()
 
         for state in all_states:
-            agent_state = self.agent.agentState(state)
+            agent_state = self.agent.getStateRepresentation(state)
             policy = self.agent.policy(agent_state, greedy= True)
             print(policy)
 

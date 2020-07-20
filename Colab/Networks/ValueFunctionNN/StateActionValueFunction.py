@@ -132,7 +132,9 @@ class StateActionVFNN3(nn.Module): # last layer has number of actions' output
                     action_shape_size = num_actions
 
                 if i == 0:
-                    linear_input_size = state_shape[1] * state_shape[2] * state_shape[3] + action_shape_size
+                    # linear_input_size = state_shape[1] * state_shape[2] * state_shape[3] + action_shape_size
+                    linear_input_size = state_shape[1] + action_shape_size
+
                     layer = nn.Linear(linear_input_size, layers_features[i])
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
@@ -183,7 +185,7 @@ class StateActionVFNN3(nn.Module): # last layer has number of actions' output
 
 class StateActionVFNN4(nn.Module): # last layer has number of actions' output
     def __init__(self, state_shape, num_actions, layers_type, layers_features, action_layer_num):
-        # state : Batch, W, H, Channels
+        # state : Batch, Flatten State
         # action: Batch, A
         super(StateActionVFNN4, self).__init__()
         self.layers_type = layers_type
@@ -247,3 +249,6 @@ class StateActionVFNN4(nn.Module): # last layer has number of actions' output
 
         x = self.head(x.float())
         return x
+
+
+

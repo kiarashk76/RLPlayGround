@@ -84,7 +84,7 @@ class GridWorldExperiment(BaseExperiment):
         all_states = self.environment.getAllStates()
 
         for state in all_states:
-            agent_state = self.agent.agentState(state)
+            agent_state = self.agent.getStateRepresentation(state)
             policy = self.agent.policy(agent_state, greedy= True)
             print(policy)
 
@@ -98,8 +98,8 @@ class GridWorldExperiment(BaseExperiment):
         for s in states:
             pos = self.environment.stateToPos(s)
             for a in actions:
-                s_torch = self.agent.getStateRepresentation(torch.from_numpy(s).unsqueeze(0))
-                values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a).item(), 3)
+                s_torch = self.agent.getStateRepresentation(s)
+                values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a, type='q').item(), 3)
                     # self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
 
@@ -225,7 +225,7 @@ class RunExperiment():
                  model_type=['forward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
-                 show_values_grid=[False, False],
+                 show_values_grid=[True, False],
                  show_model_error_grid=[False, False]):
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -415,6 +415,9 @@ class RunExperiment():
                                 state_action_values=experiment.calculateValues(),
                                 all_actions=env.getAllActions(),
                                 obstacles_pos=env.get_obstacles_pos())
+                for f in agent._vf['q']['network'].parameters():
+                    print("***")
+                    print(f, f.size())
 
 
           mean_steps_list.append(np.mean(num_steps_run_list, axis=0))
