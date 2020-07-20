@@ -12,7 +12,9 @@ class StateTransitionModelwError(nn.Module):
 
         self.action_layer_num = action_layer_num
         self.num_actions = num_actions
-        self.state_size = state_shape[0] * state_shape[1] * state_shape[2]
+
+        # self.state_size = state_shape[0] * state_shape[1] * state_shape[2]
+        self.state_size = state_shape[0]
 
         for i, layer in enumerate(layers_type):
             if layer == 'conv':
@@ -67,7 +69,7 @@ class StateTransitionModelwError(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         x = self.head(x.float())
-        x = torch.tanh(x)
+        x = torch.relu(x)
         pred_state, acc = x[0].split(self.state_size)
 
         if self.action_layer_num == len(self.layers_type) + 1:

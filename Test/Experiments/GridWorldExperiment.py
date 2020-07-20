@@ -7,7 +7,7 @@ from ..Agents.BackwardDynaAgent import BackwardDynaAgent
 from ..Agents.Dyna2Agent import Dyna2Agent
 
 from ..Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
-from .. import utils,config
+from .. import utils, config
 import numpy as np
 import torch
 import itertools

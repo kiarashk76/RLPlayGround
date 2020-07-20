@@ -8,7 +8,7 @@ import random
 def data_store(env, train_test_split = 0.7):
     transition = namedtuple('transition', ['state', 'action', 'next_state', 'reward'])
 
-    all_states = env.getAllStates(state_type='full_obs')
+    all_states = env.getAllStates(state_type='coord')
     random.shuffle(all_states)
     # train_states = all_states[0 : int(len(all_states) * train_test_split)]
     train_states = all_states #  ***** change later, now we are training on all states****
@@ -21,15 +21,15 @@ def data_store(env, train_test_split = 0.7):
 
     for state in train_states:
         for action in all_actions:
-            next_state = env.transitionFunction(state, action, state_type='full_obs')
-            reward = env.rewardFunction(next_state, state_type='full_obs')
+            next_state = env.transitionFunction(state, action, state_type='coord')
+            reward = env.rewardFunction(next_state, state_type='coord')
             t = transition(state, action, next_state, reward)
             train_list.append(t)
 
     for state in test_state:
         for action in all_actions:
-            next_state = env.transitionFunction(state, action, state_type='full_obs')
-            reward = env.rewardFunction(next_state, state_type='full_obs')
+            next_state = env.transitionFunction(state, action, state_type='coord')
+            reward = env.rewardFunction(next_state, state_type='coord')
             t = transition(state, action, next_state, reward)
             test_list.append(t)
     return train_list, test_list

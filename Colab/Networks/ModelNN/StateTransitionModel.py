@@ -69,7 +69,7 @@ class StateTransitionModel2(nn.Module):
                     a = action.flatten(start_dim=1)
                     x = torch.cat((x.float(), a.float()), dim=1)
                 x = self.layers[i](x.float())
-                x = torch.tanh(x)
+                x = torch.relu(x)
             else:
                 raise ValueError("layer is not defined")
 
@@ -78,7 +78,7 @@ class StateTransitionModel2(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         x = self.head(x.float())
-        x = torch.tanh(x)
+        # x = torch.relu(x)
 
         if self.action_layer_num == len(self.layers_type) + 1:
             return x.view((-1,) + (self.num_actions,) + state.shape[1:])  # -1 is for the batch size
@@ -143,7 +143,7 @@ class StateTransitionModel(nn.Module):
                     a = action.flatten(start_dim=1)
                     x = torch.cat((x.float(), a.float()), dim=1)
                 x = self.layers[i](x.float())
-                x = torch.tanh(x)
+                x = torch.relu(x)
             else:
                 raise ValueError("layer is not defined")
 
@@ -152,13 +152,12 @@ class StateTransitionModel(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         x = self.head(x.float())
-        x = torch.tanh(x)
+        # x = torch.tanh(x)
 
         if self.action_layer_num == len(self.layers_type) + 1:
             return x.view((-1,) + (self.num_actions,) + state.shape[1:])  # -1 is for the batch size
         else:
             return x.view(state.shape) # -1 is for the batch size
-
 
 
 # PreTrain Forward
