@@ -203,11 +203,13 @@ class StateActionVFNN4(nn.Module): # last layer has number of actions' output
                 if i == 0:
                     linear_input_size = state_shape[1] + action_shape_size
                     layer = nn.Linear(linear_input_size, layers_features[i])
+                    # nn.init.normal_(layer.weight)
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
 
                 else:
                     layer = nn.Linear(layers_features[i-1] + action_shape_size, layers_features[i])
+                    # nn.init.normal_(layer.weight)
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
             else:
@@ -215,14 +217,15 @@ class StateActionVFNN4(nn.Module): # last layer has number of actions' output
 
         if self.action_layer_num == len(self.layers_type):
             self.head = nn.Linear(layers_features[-1] + num_actions, 1)
+            # nn.init.normal_(self.head.weight)
 
         elif self.action_layer_num == len(self.layers_type) + 1:
             self.head = nn.Linear(layers_features[-1], num_actions)
+            # nn.init.normal_(self.head.weight)
 
         else:
             self.head = nn.Linear(layers_features[-1], 1)
-
-
+            # nn.init.normal_(self.head.weight)
 
     def forward(self, state, action=None):
         if self.action_layer_num != len(self.layers) + 1 and action is None:

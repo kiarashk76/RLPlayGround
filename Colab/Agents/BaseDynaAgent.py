@@ -13,7 +13,7 @@ from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionV
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
 
-class BaseDynaAgent(BaseAgent):
+class BaseDynaAgent3(BaseAgent):
     def __init__(self, params = {}):
         self.time_step = 0
 
@@ -609,313 +609,8 @@ class BaseDynaAgent(BaseAgent):
 #     def removeFromTransitionBuffer(self):
 #         self.transition_buffer.pop(0)
 
-class BaseDynaAgent2(BaseAgent):
-    def __init__(self, params = {}):
-        self.time_step = 0
 
-        self.prev_obs = None
-        self.obs = None
-
-        self.action_list = params['action_list']
-        self.num_actions = self.action_list.shape[0]
-        self.actions_shape = self.action_list.shape[1:]
-
-        self.gamma = params['gamma']
-        self.epsilon = params['epsilon']
-
-        self.transition_buffer = []
-        self.transition_buffer_size = 1
-
-        self.policy_values = 'q' # 'q' or 's' or 'qs'
-        self.vf = {'q': dict(network=None,
-                    layers_type=['fc', 'fc'],
-                    layers_features=[64, 32],
-                    action_layer_num=3, # if one more than layer numbers => we will have num of actions output
-                    batch_size=20,
-                    batch_counter=1,
-                    step_size=0.01,
-                    training=True),
-
-                   's': dict(network=None,
-                    layers_type=['fc', 'fc'],
-                    layers_features=[64, 32],
-                    batch_size=5,
-                    step_size=0.01,
-                    batch_counter=0,
-                    training=False)}
-
-        self.reward_function = params['reward_function']
-        self.device = params['device']
-        self.goal = torch.from_numpy(params['goal']).float().to(self.device)
-
-    def start(self, observation):
-        self.batch_counter = 0
-        self.prev_state = self.getStateRepresentation(observation)
-
-        if self.vf['q']['network'] is None and self.vf['q']['training']:
-            self.init_q_value_function_network() # a general state action VF for all actions
-        if self.vf['s']['network'] is None and self.vf['s']['training']:
-            self.init_s_value_function_network() # a separate state VF for each action
-
-        self.prev_action = self.policy(self.prev_state)
-
-        self.initModel()
-
-        return self.prev_action
-
-    def step(self, reward, observation):
-        self.time_step += 1
-        self.state = self.getStateRepresentation(observation)
-
-        self.action = self.policy(self.state)
-
-        self.updateValueFunction(reward, self.prev_state, self.state, self.action)
-        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     self.state, self.action, False, self.time_step))
-        # prev_state, prev_action, reward, state, action, is_terminal, _ = self.getTransitionFromBuffer()[0]
-        # self.updateValueFunction(reward, prev_state, state, action)
-
-        self.trainModel()
-        self.plan()
-
-        self.prev_state = self.state
-        self.prev_action = self.action # another option:** we can again call self.policy function **
-
-
-
-        return self.prev_action
-
-    def end(self, reward):
-        self.updateValueFunction(reward, self.prev_state, None)
-
-        # self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-        #                                              None, None, False, self.time_step))
-        # prev_state, prev_action, reward, state, action, is_terminal, _ = self.getTransitionFromBuffer()[0]
-        # self.updateValueFunction(reward, prev_state, state, action)
-
-        # self.trainModel(self.prev_state, self.action, self.state, terminal=True)
-
-
-    def policy(self, state_torch):
-        state_torch = state_torch.to(self.device).unsqueeze(0)
-        if np.random.rand() > self.epsilon:
-            v = []
-            for i, action in enumerate(self.action_list):
-                if self.policy_values == 'q':
-                    action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-                    if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                        v.append(self.vf['q']['network'](state_torch, action_onehot).detach()[0, i])
-                    else:
-                        v.append(self.vf['q']['network'](state_torch, action_onehot).detach())
-                elif self.policy_values == 's':
-                    v.append(self.vf['s']['network'][i](state_torch).detach())
-                elif self.policy_values == 'qs':
-                    action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-                    if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                        q = self.vf['q']['network'](state_torch, action_onehot).detach()[0, i]
-                    else:
-                        q = self.vf['q']['network'](state_torch, action_onehot).detach()
-                    s = self.vf['s']['network'][i](state_torch).detach()
-                    v.append( (q+s) /2)
-                else:
-                   raise ValueError('policy is not defined')
-            action = self.action_list[np.argmax(v)]
-        else:
-            action = self.action_list[int(np.random.rand() * self.num_actions)]
-
-        return action
-
-    def getStateRepresentation(self, observation):
-        return torch.from_numpy(observation).to(self.device)
-
-    def updateNetworkWeights(self, network, step_size):
-        # another option: ** can use a optimizer here later**
-        optimizer = optim.SGD(network.parameters(), lr= step_size)
-        optimizer.step()
-        optimizer.zero_grad()
-
-        # for f in network.parameters():
-        #     f.data.sub_(step_size * f.grad.data)
-        # network.zero_grad()
-
-    def getActionIndex(self, action):
-        for i, a in enumerate(self.action_list):
-            if list(a) == list(action):
-                return i
-        raise ValueError("action is not defined")
-
-    def getActionOnehot(self, action):
-        res = np.zeros([len(self.action_list)])
-        res[self.getActionIndex(action)] = 1
-        return res
-
-    def init_q_value_function_network(self):
-        nn_state_shape = (self.vf['q']['batch_size'],) + self.prev_state.shape
-        self.vf['q']['network'] = StateActionVFNN3(nn_state_shape, self.num_actions,
-                                                 self.vf['q']['layers_type'],
-                                                 self.vf['q']['layers_features'],
-                                                 self.vf['q']['action_layer_num']).to(self.device)
-
-    def init_s_value_function_network(self):
-        nn_state_shape = (self.vf['s']['batch_size'],) + self.prev_state.shape
-        self.vf['s']['network'] = []
-        for i in range(self.num_actions):
-            self.vf['s']['network'].append(StateVFNN(nn_state_shape,
-                                                     self.vf['s']['layers_type'],
-                                                     self.vf['s']['layers_features']).to(self.device))
-
-    def updateValueFunction(self, reward, x_old, x_new = None, prev_action=None, action=None):
-        self.batch_counter += 1
-        if prev_action is None:
-            prev_action = self.prev_action
-        if x_new is not None: # Not a terminal State
-            if action is None:
-                action = self.action
-            assert x_old.shape == x_new.shape, 'x_old and x_new have different shapes'
-            prev_action_index = self.getActionIndex(prev_action)
-            action_index = self.getActionIndex(action)
-            prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0).to(self.device)
-            action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-
-            x_old = x_old.unsqueeze(0).to(self.device)
-            x_new = x_new.unsqueeze(0).to(self.device)
-            reward = torch.tensor(reward).to(self.device).unsqueeze(0)
-
-            if self.vf['q']['training']:
-                if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                    target = reward + self.gamma * self.vf['q']['network'](x_new).detach()[:, action_index]
-                    input = self.vf['q']['network'](x_old)[:, prev_action_index]
-                else:
-                    target = reward + self.gamma * self.vf['q']['network'](x_new, action_onehot).detach()
-                    input = self.vf['q']['network'](x_old, prev_action_onehot)
-
-                assert target.shape == input.shape, 'target and input must have same shapes'
-                loss = nn.MSELoss()(input, target)
-                loss.backward()
-                if self.batch_counter % self.vf['q']['batch_size'] == 0:
-                    step_size = self.vf['q']['step_size'] / self.vf['q']['batch_size']
-                    self.updateNetworkWeights(self.vf['q']['network'],
-                                              step_size)
-
-            if self.vf['s']['training']:
-                target = reward + self.gamma * self.vf['s']['network'][action_index](x_new).detach()
-                input = self.vf['s']['network'][prev_action_index](x_old)
-                assert target.shape == input.shape, 'target and input must have same shapes'
-                loss = nn.MSELoss()(input, target)
-                loss.backward()
-                if self.batch_counter % self.vf['s']['batch_size'] == 0:
-                    step_size = self.vf['s']['step_size'] / self.vf['s']['batch_size']
-                    self.updateNetworkWeights(self.vf['s']['network'][prev_action_index],
-                                              step_size)
-        else : # terminal state
-            prev_action_index = self.getActionIndex(prev_action)
-            prev_action_onehot = torch.from_numpy(self.getActionOnehot(prev_action)).float().unsqueeze(0).to(self.device)
-
-            x_old = x_old.unsqueeze(0).to(self.device)
-            reward = torch.tensor(reward).to(self.device).unsqueeze(0)
-
-            if self.vf['q']['training']:
-                if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                    target = reward
-                    input = self.vf['q']['network'](x_old)[:, prev_action_index]
-                else:
-                    target = reward.unsqueeze(0)
-                    input = self.vf['q']['network'](x_old, prev_action_onehot)
-
-                assert target.shape == input.shape, 'target and input must have same shapes'
-                loss = nn.MSELoss()(input.float(), target.float())
-                loss.backward()
-
-                if self.batch_counter % self.vf['q']['batch_size'] == 0 :
-                    step_size = self.vf['q']['step_size'] / self.vf['q']['batch_size']
-                else:
-                    step_size = self.vf['q']['step_size'] /\
-                                (self.batch_counter % self.vf['q']['batch_size'])
-
-                self.updateNetworkWeights(self.vf['q']['network'], step_size)
-            if self.vf['s']['training']:
-                target = torch.tensor(reward).unsqueeze(0)
-                input = self.vf['s']['network'][prev_action_index](x_old)
-                assert target.shape == input.shape, 'target and input must have same shapes'
-                loss = nn.MSELoss()(input.float(), target.float())
-                loss.backward()
-
-                if self.batch_counter % self.vf['s']['batch_size'] == 0 :
-                    step_size = self.vf['s']['step_size'] / self.vf['s']['batch_size']
-                else:
-                    step_size = self.vf['s']['step_size'] /\
-                                (self.batch_counter % self.vf['s']['batch_size'])
-                self.updateNetworkWeights(self.vf['s']['network'][prev_action_index], step_size)
-
-    def getStateActionValue(self, x, action=None, type='q'):
-        x = x.unsqueeze(0)
-        if action is not None:
-            action_index = self.getActionIndex(action)
-            action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-
-            if type == 'q':
-                if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                    value = self.vf['q']['network'](x).detach()[:, action_index]
-                else:
-                    value = self.vf['q']['network'](x, action_onehot).detach()
-
-            elif type == 's':
-                value = self.vf['s']['network'][action_index](x).detach()
-
-            else:
-                raise ValueError('state action value type is not defined')
-
-            return value
-        else:
-            sum = 0
-            for action in self.action_list:
-                action_index = self.getActionIndex(action)
-                action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-
-                if type == 'q':
-                    if len(self.vf['q']['layers_type']) + 1 == self.vf['q']['action_layer_num']:
-                        value = self.vf['q']['network'](x).detach()[:, action_index]
-                    else:
-                        value = self.vf['q']['network'](x, action_onehot).detach()
-
-                elif type == 's':
-                    value = self.vf['s']['network'][action_index](x).detach()
-
-                else:
-                    raise ValueError('state action value type is not defined')
-
-                sum+= value
-
-            return sum / len(self.action_list)
-
-    def getTransitionFromBuffer(self, n=1):
-        # both model and value function are using this buffer
-        if len(self.transition_buffer) < n:
-            n = len(self.transition_buffer)
-        return random.choices(self.transition_buffer, k=n)
-
-    def updateTransitionBuffer(self, transition):
-        self.transition_buffer.append(transition)
-        if len(self.transition_buffer) > self.transition_buffer_size:
-            self.removeFromTransitionBuffer()
-
-    @abstractmethod
-    def trainModel(self):
-        pass
-
-    @abstractmethod
-    def plan(self):
-        pass
-
-    @abstractmethod
-    def initModel(self):
-        pass
-
-    @abstractmethod
-    def removeFromTransitionBuffer(self):
-        self.transition_buffer.pop(0)
-
-class BaseDynaAgent3(BaseAgent):
+class BaseDynaAgent(BaseAgent):
     def __init__(self, params={}):
         self.time_step = 0
         self.writer = SummaryWriter()
@@ -931,7 +626,7 @@ class BaseDynaAgent3(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 1
+        self.transition_buffer_size = 100
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
@@ -939,24 +634,22 @@ class BaseDynaAgent3(BaseAgent):
                              layers_type=['fc','fc'],
                              layers_features=[64,32],
                              action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
-                             batch_size=1,
-                             batch_counter=0,
-                             step_size=0.01,
+                             batch_size=10,
+                             step_size=0.001/10,
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
                              layers_features=[32],
                              batch_size=1,
                              step_size=0.01,
-                             batch_counter=0,
                              training=False)}
 
         self._sr = dict(network=None,
                        layers_type=[],
-                       layers_features=[64],
-                       batch_size=1,
-                       step_size=0.01,
-                       batch_counter=0,
+                       layers_features=[],
+                       batch_size=None,
+                       step_size=None,
+                       batch_counter=None,
                        training=False)
 
         self._target_vf = dict(network=None,
@@ -974,8 +667,7 @@ class BaseDynaAgent3(BaseAgent):
         if self._sr['network'] is None:
             self.init_s_representation_network(observation)
 
-        self.prev_obs = observation
-        self.prev_state = self.getStateRepresentation(self.prev_obs)
+        self.prev_state = self.getStateRepresentation(observation)
 
         if self._vf['q']['network'] is None and self._vf['q']['training']:
             self.init_q_value_function_network(self.prev_state)  # a general state action VF for all actions
@@ -1000,26 +692,29 @@ class BaseDynaAgent3(BaseAgent):
         self.action = self.policy(self.state)
 
         #store the new transition in buffer
-        self.updateTransitionBuffer(utils.transition(self.prev_obs, self.prev_action, reward,
-                                                     observation, self.action, False, self.time_step))
+        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
+                                                     self.state, self.action, False, self.time_step))
         #update target
         if self._target_vf['counter'] >= self._target_vf['update_rate']:
             self.setTargetValueFunction(self._vf['q'], 'q')
             # self.setTargetValueFunction(self._vf['s'], 's')
-
             self._target_vf['counter'] = 0
 
         #update value function with the buffer
-        self.updateValueFunction()
+        if self._vf['q']['training']:
+            if len(self.transition_buffer) >= self._vf['q']['batch_size']:
+                transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
+                self.updateValueFunction(transition_batch, 'q')
+        if self._vf['s']['training']:
+            if len(self.transition_buffer) >= self._vf['s']['batch_size']:
+                transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
+                self.updateValueFunction(transition_batch, 's')
 
         #train/plan with model
         self.trainModel()
         self.plan()
 
-        self.updateStateRepresentation()
-
-        self.prev_state = self.getStateRepresentation(observation, gradient=False)
-        self.prev_obs = observation
+        self.prev_state = self.getStateRepresentation(observation)
         self.prev_action = self.action  # another option:** we can again call self.policy function **
 
         return self.prev_action
@@ -1027,10 +722,17 @@ class BaseDynaAgent3(BaseAgent):
     def end(self, reward):
         reward = torch.tensor(reward).unsqueeze(0).to(self.device)
 
-        self.updateTransitionBuffer(utils.transition(self.prev_obs, self.prev_action, reward,
+        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
                                                      None, None, True, self.time_step))
 
-        self.updateValueFunction()
+        if self._vf['q']['training']:
+            if len(self.transition_buffer) >= self._vf['q']['batch_size']:
+                transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
+                self.updateValueFunction(transition_batch, 'q')
+        if self._vf['s']['training']:
+            if len(self.transition_buffer) >= self._vf['s']['batch_size']:
+                transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
+                self.updateValueFunction(transition_batch, 's')
 
         self.trainModel()
         self.updateStateRepresentation()
@@ -1046,13 +748,13 @@ class BaseDynaAgent3(BaseAgent):
         v = []
         for i, action in enumerate(self.action_list):
             if self.policy_values == 'q':
-                v.append(self.getStateActionValue(state, action, type='q'))
+                v.append(self.getStateActionValue(state, action, vf_type='q'))
             elif self.policy_values == 's':
-                v.append(self.getStateActionValue(state, type='s'))
+                v.append(self.getStateActionValue(state, vf_type='s'))
 
             elif self.policy_values == 'qs':
-                q = self.getStateActionValue(state, action, type='q')
-                s = self.getStateActionValue(state, type='s')
+                q = self.getStateActionValue(state, action, vf_type='q')
+                s = self.getStateActionValue(state, vf_type='s')
                 v.append((q + s) / 2)
             else:
                 raise ValueError('policy is not defined')
@@ -1106,61 +808,44 @@ class BaseDynaAgent3(BaseAgent):
                                                  self._sr['layers_features']).to(self.device)
 
 # ***
-    def updateValueFunction(self):
-        batch = self.getTransitionFromBuffer()
-        for i, data in enumerate(batch):
-            prev_obs, prev_action, reward, obs, action, _, t = data
-            self.calculateGradientValueFunction(reward, prev_obs, prev_action, obs, action)
+    def updateValueFunction(self, transition_batch, vf_type):
+        for i, data in enumerate(transition_batch):
+            prev_state, prev_action, reward, state, action, _, t = data
+            self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
+        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'])
+        self._target_vf['counter'] += 1
 
-    def calculateGradientValueFunction(self, reward, prev_obs, prev_action, obs=None, action=None):
+    def calculateGradientValueFunction(self, vf_type, reward, prev_state, prev_action, state=None, action=None):
         if prev_action is None:
             raise ValueError('previous action not given')
-
         prev_action_index = self.getActionIndex(prev_action)
-        prev_state = self.getStateRepresentation(prev_obs, gradient=True)
-        if self._vf['q']['training']:
+        if vf_type == 'q':
             target = reward.float()
-            if obs is not None:  # Not a terminal State
-                state = self.getStateRepresentation(obs)
+            if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
-                # target += self.gamma * self.getTargetValue(state, action)
-            input = self.getStateActionValue(prev_state, prev_action, type='q', gradient=True)
+                # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
+                target += self.gamma * self.getTargetValue(state, action)
+            input = self.getStateActionValue(prev_state, prev_action, vf_type='q', gradient=True)
             assert target.shape == input.shape, 'target and input must have same shapes'
             loss = nn.MSELoss()(input, target)
             loss.backward()
 
-            self._vf['q']['batch_counter'] += 1
-            if self._vf['q']['batch_counter'] == self._vf['q']['batch_size']:
-                step_size = self._vf['q']['step_size'] / self._vf['q']['batch_size']
-                self.updateNetworkWeights(self._vf['q']['network'], step_size)
-                self._vf['q']['batch_counter'] = 0
-                self._target_vf['counter'] += 1
-
-        if self._vf['s']['training']:
+        if vf_type == 's':
             target = reward.float()
-            if obs is not None:  # Not a terminal State
-                state = self.getStateRepresentation(obs)
+            if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='s')
-                # target += self.gamma * self.getTargetValue(state, action)
-
-            input = self.getStateActionValue(prev_state, prev_action, type='s', gradient=True)
+                # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='s')
+                target += self.gamma * self.getTargetValue(state, action)
+            input = self.getStateActionValue(prev_state, prev_action, vf_type='s', gradient=True)
             assert target.shape == input.shape, 'target and input must have same shapes'
             loss = nn.MSELoss()(input, target)
             loss.backward()
-            self._vf['s']['batch_counter'] += 1
-            if self._vf['s']['batch_counter'] == self._vf['s']['batch_size']:
-                step_size = self._vf['s']['step_size'] / self._vf['s']['batch_size']
-                self.updateNetworkWeights(self._vf['s']['network'][prev_action_index],
-                                          step_size)
-                self._vf['s']['batch_counter'] = 0
 
-    def getStateActionValue(self, state, action=None, type='q', gradient=False):
+    def getStateActionValue(self, state, action=None, vf_type='q', gradient=False):
         '''
         :param state: torch -> [1, state_shape]
         :param action: numpy array
-        :param type: str -> 'q' or 's'
+        :param vf_type: str -> 'q' or 's'
         :param gradient: boolean
         :return: value: int
         '''
@@ -1168,7 +853,7 @@ class BaseDynaAgent3(BaseAgent):
             action_index = self.getActionIndex(action)
             action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
 
-            if type == 'q':
+            if vf_type == 'q':
                 if len(self._vf['q']['layers_type']) + 1 == self._vf['q']['action_layer_num']:
                     value = self._vf['q']['network'](state).detach()[:, action_index] if not gradient \
                         else self._vf['q']['network'](state)[:, action_index]
@@ -1176,7 +861,7 @@ class BaseDynaAgent3(BaseAgent):
                     value = self._vf['q']['network'](state, action_onehot).detach()[0] if not gradient \
                         else self._vf['q']['network'](state, action_onehot)[0]
 
-            elif type == 's':
+            elif vf_type == 's':
                 value = self._vf['s']['network'][action_index](state).detach()[0] if not gradient \
                     else self._vf['s']['network'][action_index](state)[0]
 
@@ -1192,13 +877,13 @@ class BaseDynaAgent3(BaseAgent):
                 action_index = self.getActionIndex(action)
                 action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
 
-                if type == 'q':
+                if vf_type == 'q':
                     if len(self._vf['q']['layers_type']) + 1 == self._vf['q']['action_layer_num']:
                         value = self._vf['q']['network'](state).detach()[:, action_index]
                     else:
                         value = self._vf['q']['network'](state, action_onehot).detach()[0]
 
-                elif type == 's':
+                elif vf_type == 's':
                     value = self._vf['s']['network'][action_index](state).detach()[0]
 
                 else:
@@ -1230,19 +915,16 @@ class BaseDynaAgent3(BaseAgent):
 
 # ***
     def setTargetValueFunction(self, vf, type):
+        if self._target_vf['network'] is None:
+            nn_state_shape = self.prev_state.shape
+            self._target_vf['network'] = StateActionVFNN4(
+                                             nn_state_shape,
+                                             self.num_actions,
+                                             vf['layers_type'],
+                                             vf['layers_features'],
+                                             vf['action_layer_num']).to(self.device)
 
-        # self._target_vf['network'] = type(vf['network'])()  # get a new instance
-        # self._target_vf['network'].load_state_dict(vf['network'].state_dict())  # copy weights and stuff
-        # self._target_vf['network'] = copy.deepcopy(vf['network'])
-        nn_state_shape = self.prev_state.shape
-        self._target_vf['network'] = StateActionVFNN4(
-                                         nn_state_shape,
-                                         self.num_actions,
-                                         vf['layers_type'],
-                                         vf['layers_features'],
-                                         vf['action_layer_num']).to(self.device)
         self._target_vf['network'].load_state_dict(vf['network'].state_dict())  # copy weights and stuff
-
         if type != 's':
             self._target_vf['action_layer_num'] = vf['action_layer_num']
         self._target_vf['layers_num'] = len(vf['layers_type'])
@@ -1295,7 +977,7 @@ class BaseDynaAgent3(BaseAgent):
             return sum / len(self.action_list)
 
 # ***
-    def getTransitionFromBuffer(self, n=1):
+    def getTransitionFromBuffer(self, n):
         # both model and value function are using this buffer
         if len(self.transition_buffer) < n:
             n = len(self.transition_buffer)

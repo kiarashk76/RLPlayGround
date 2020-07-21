@@ -153,13 +153,13 @@ class Dyna2Agent(BaseDynaAgent):
             v = []
             for i, action in enumerate(self.action_list):
                 if self.policy_values == 'q':
-                    v.append(self.getStateActionValue(state, action, type='q')
+                    v.append(self.getStateActionValue(state, action, vf_type='q')
                              + self.getStateActionShortValue(state, action, type='q'))
                 elif self.policy_values == 's':
-                    v.append(self.getStateActionValue(state, action, type='s'))
+                    v.append(self.getStateActionValue(state, action, vf_type='s'))
                 elif self.policy_values == 'qs':
-                    q = self.getStateActionValue(state, action, type='q')
-                    s = self.getStateActionValue(state, action, type='s')
+                    q = self.getStateActionValue(state, action, vf_type='q')
+                    s = self.getStateActionValue(state, action, vf_type='s')
                     v.append( (q+s) /2)
                 else:
                    raise ValueError('policy is not defined')

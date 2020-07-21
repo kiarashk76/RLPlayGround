@@ -43,7 +43,7 @@ class GridWorldExperiment(BaseExperiment):
         self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
-        if self._render_on and self.num_episodes > 0:
+        if self._render_on and self.num_episodes >= 0:
             # self.environment.render()
             self.environment.render(values=self.calculateValues())
             # self.environment.render(values= self.calculateModelError(self.agent.model['backward'],
@@ -99,7 +99,7 @@ class GridWorldExperiment(BaseExperiment):
             pos = self.environment.stateToPos(s)
             for a in actions:
                 s_torch = self.agent.getStateRepresentation(s)
-                values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a, type='q').item(), 3)
+                values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a, vf_type='q').item(), 3)
                     # self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
 
@@ -222,10 +222,10 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['forward'],
+                 model_type=['free'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
-                 show_values_grid=[True, False],
+                 show_values_grid=[False, False],
                  show_model_error_grid=[False, False]):
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -345,7 +345,7 @@ class RunExperiment():
                                                   'true_model': env.transitionFunctionBackward})
                 elif self.model_type[i] == 'free':
                     agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                            'gamma':1.0, 'epsilon': 0.01,
+                                            'gamma':1.0, 'epsilon': 0.1,
                                             'reward_function': reward_function,
                                             'goal': goal,
                                             'model': None,
@@ -379,22 +379,22 @@ class RunExperiment():
 
                 num_steps_run_list[r, e] = experiment.num_steps
 
-            model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward',
-                                                                 true_transition_function=env.transitionFunction)
+            # model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward',
+            #                                                      true_transition_function=env.transitionFunction)
 
             model_error_run_list.append(model_error_list)
             # model_val_error_run_list.append(model_val_error_list)
             model_error_run_num_samples.append(model_error_num_samples)
             
-            utils.draw_plot(model_error_num_samples, model_error_list,
-                          xlabel='num_samples', ylabel='model_error', show=True,
-                          label=self.model_type[i], title=self.model_type[i])
-            
+            # utils.draw_plot(model_error_num_samples, model_error_list,
+            #               xlabel='num_samples', ylabel='model_error', show=True,
+            #               label=self.model_type[i], title=self.model_type[i])
+            #
             utils.draw_plot(range(len(num_steps_run_list[r])), num_steps_run_list[r],
                           xlabel='episode_num', ylabel='num_steps', show=True,
                           label=self.model_type[i], title=self.model_type[i])
 
-            utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
+            # utils.draw_plot(range(len(experiment.agent.model_pred_error)), experiment.agent.model_pred_error,show=True)
 
             if self.show_model_error_grid[i] :
                 if self.model_type[i] == 'forward':

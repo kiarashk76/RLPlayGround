@@ -7,10 +7,9 @@ import random
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 import Colab.Networks.ModelNN.StateTransitionModel as STModel
 
-class ForwardDynaAgent2(BaseDynaAgent):
+class ForwardDynaAgent(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardDynaAgent, self).__init__(params)
-        # self.model_batch_counter = 0
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.1,
                                       layers_type=['fc', 'fc'],
@@ -19,7 +18,6 @@ class ForwardDynaAgent2(BaseDynaAgent):
                                       batch_size=8,
                                       halluc_steps=2,
                                       training=True,
-                                      plan_steps=0,
                                       plan_horizon=3,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
@@ -37,14 +35,15 @@ class ForwardDynaAgent2(BaseDynaAgent):
             self.model['forward']['network'].to(self.device)
 
     def trainModel(self, terminal=False):
-        sample_transitions = self.getTransitionFromBuffer(n=self.model['forward']['batch_size'])
-        for sample in sample_transitions:
-            state, action, reward, next_state, _ = sample
-            if self.model['forward']['training'] is True:
-                self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal)
+        if len(self.transition_buffer) >= self.model['forward']['batch_size']:
+            transition_batch = self.getTransitionFromBuffer(n=self.model['forward']['batch_size'])
+            for sample in transition_batch:
+                state, action, reward, next_state, _ = sample
+                if self.model['forward']['training'] is True:
+                    self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal)
 
-        step_size = self.model['forward']['step_size'] / len(sample_transitions)
-        self.updateNetworkWeights(self.model['forward']['network'], step_size)
+            step_size = self.model['forward']['step_size'] / len(sample_transitions)
+            self.updateNetworkWeights(self.model['forward']['network'], step_size)
 
     def plan(self):
         self.updatePlanningBuffer(self.model['forward'], self.prev_state)
@@ -130,7 +129,7 @@ class ForwardDynaAgent2(BaseDynaAgent):
 
 
 
-class ForwardDynaAgent(BaseDynaAgent):
+class ForwardDynaAgent2(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardDynaAgent, self).__init__(params)
         # self.model_batch_counter = 0
@@ -217,13 +216,13 @@ class ForwardDynaAgent(BaseDynaAgent):
             v = []
             for i, action in enumerate(self.action_list):
                 if self.policy_values == 'q':
-                    v.append(self.getStateActionValue(state_torch, action, type='q'))
+                    v.append(self.getStateActionValue(state_torch, action, vf_type='q'))
                 elif self.policy_values == 's':
-                    v.append(self.getStateActionValue(state_torch, type='s'))
+                    v.append(self.getStateActionValue(state_torch, vf_type='s'))
 
                 elif self.policy_values == 'qs':
-                    q = self.getStateActionValue(state_torch, action, type='q')
-                    s = self.getStateActionValue(state_torch, type='s')
+                    q = self.getStateActionValue(state_torch, action, vf_type='q')
+                    s = self.getStateActionValue(state_torch, vf_type='s')
                     v.append((q + s) / 2)
                 else:
                     raise ValueError('policy is not defined')
