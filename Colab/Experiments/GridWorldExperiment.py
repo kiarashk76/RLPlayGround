@@ -182,22 +182,21 @@ class GridWorldExperiment(BaseExperiment):
     def calculateModelErrorWithData(self, model, test_data, type='forward', true_transition_function=None):
         sum = 0.0
         for data in test_data:
-            state, action, next_state, reward = data
+            obs, action, next_obs, reward = data
             if type == 'forward':
-                next_state = torch.from_numpy(np.asarray(next_state)).to(self.device)
-                true_state = torch.from_numpy(np.asarray(true_transition_function(state, action, state_type='coord'))).to(self.device)
-                # if not torch.all(torch.eq(next_state, true_state):
-                #   print("an")
-                pred_state = self.agent.rolloutWithModel(torch.from_numpy(np.asarray(state)).to(self.device), action, model)
+                next_state = self.agent.getStateRepresentation(next_obs)
+                state = self.agent.getStateRepresentation(obs)
+                true_state = self.agent.getStateRepresentation(true_transition_function(obs, action, state_type='coord'))
+                pred_state = self.agent.rolloutWithModel(state, action, model)
 
                 assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
                 err = torch.mean((next_state - pred_state) ** 2)
-                print(err, state, action, next_state, pred_state)
+
             elif type == 'backward':
-                state = torch.from_numpy(state).to(self.device)
-                pred_state = self.agent.rolloutWithModel(torch.from_numpy(next_state).to(self.device), action, model)
-                assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
-                err = torch.mean((state - pred_state) ** 2)
+                obs = torch.from_numpy(obs).to(self.device)
+                pred_state = self.agent.rolloutWithModel(torch.from_numpy(next_obs).to(self.device), action, model)
+                assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
+                err = torch.mean((obs - pred_state) ** 2)
             else:
                 raise ValueError('type is not defined')
             sum += err
@@ -222,7 +221,7 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['free'],
+                 model_type=['forward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],
@@ -312,7 +311,7 @@ class RunExperiment():
                 if self.model_type[i] == 'forward':
                     if self.use_pre_trained[i]:
                         agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                  'gamma': 1.0, 'epsilon': 0.01,
+                                                  'gamma': 1.0, 'epsilon': 0.1,
                                                   'reward_function': reward_function,
                                                   'goal': goal,
                                                   'device': self.device,
@@ -320,7 +319,7 @@ class RunExperiment():
                                                   'true_model': env.transitionFunction})
                     else:
                         agent = ForwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                  'gamma': 1.0, 'epsilon': 1.0,
+                                                  'gamma': 1.0, 'epsilon': 0.1,
                                                   'reward_function': reward_function,
                                                   'goal': goal,
                                                   'device': self.device,
@@ -362,8 +361,8 @@ class RunExperiment():
                 experiment.runEpisode(max_step_each_episode)
 
                 if self.model_type[i] == 'forward':
-                    pass
-                    # model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward', true_transition_function= env.transitionFunction)
+                    model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test, type='forward', true_transition_function= env.transitionFunction)
+                    model_error_list.append(model_error)
                     # model_error, model_val_error = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, vf=agent.getStateActionValue)
                     # model_error2 = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, n=10)
 

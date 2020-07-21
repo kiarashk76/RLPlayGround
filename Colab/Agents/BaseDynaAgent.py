@@ -664,6 +664,10 @@ class BaseDynaAgent(BaseAgent):
         self.goal = torch.from_numpy(params['goal']).float().to(self.device)
 
     def start(self, observation):
+        '''
+        :param observation: numpy array -> (observation shape)
+        :return: action : numpy array
+        '''
         if self._sr['network'] is None:
             self.init_s_representation_network(observation)
 
@@ -679,7 +683,7 @@ class BaseDynaAgent(BaseAgent):
 
         self.prev_action = self.policy(self.prev_state)
 
-        self.initModel()
+        self.initModel(self.prev_state)
 
         return self.prev_action
 
@@ -742,24 +746,25 @@ class BaseDynaAgent(BaseAgent):
         :param state: torch -> (1, state_shape)
         :return: action: numpy array
         '''
-        if np.random.rand() <= self.epsilon:
-            ind = int(np.random.rand() * self.num_actions)
-            return self.action_list[ind]
-        v = []
-        for i, action in enumerate(self.action_list):
-            if self.policy_values == 'q':
-                v.append(self.getStateActionValue(state, action, vf_type='q'))
-            elif self.policy_values == 's':
-                v.append(self.getStateActionValue(state, vf_type='s'))
+        with torch.no_grad():
+            if np.random.rand() <= self.epsilon:
+                ind = int(np.random.rand() * self.num_actions)
+                return self.action_list[ind]
+            v = []
+            for i, action in enumerate(self.action_list):
+                if self.policy_values == 'q':
+                    v.append(self.getStateActionValue(state, action, vf_type='q'))
+                elif self.policy_values == 's':
+                    v.append(self.getStateActionValue(state, vf_type='s'))
 
-            elif self.policy_values == 'qs':
-                q = self.getStateActionValue(state, action, vf_type='q')
-                s = self.getStateActionValue(state, vf_type='s')
-                v.append((q + s) / 2)
-            else:
-                raise ValueError('policy is not defined')
-        ind = np.argmax(v)
-        return self.action_list[ind]
+                elif self.policy_values == 'qs':
+                    q = self.getStateActionValue(state, action, vf_type='q')
+                    s = self.getStateActionValue(state, vf_type='s')
+                    v.append((q + s) / 2)
+                else:
+                    raise ValueError('policy is not defined')
+            ind = np.argmax(v)
+            return self.action_list[ind]
 
 
 # ***
@@ -1013,6 +1018,6 @@ class BaseDynaAgent(BaseAgent):
         pass
 
     @abstractmethod
-    def initModel(self):
+    def initModel(self, state):
         pass
 

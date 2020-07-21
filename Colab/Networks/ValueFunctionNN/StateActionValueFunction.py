@@ -185,7 +185,7 @@ class StateActionVFNN3(nn.Module): # last layer has number of actions' output
 
 class StateActionVFNN4(nn.Module): # last layer has number of actions' output
     def __init__(self, state_shape, num_actions, layers_type, layers_features, action_layer_num):
-        # state : Batch, Flatten State
+        # state : Batch, Linear State
         # action: Batch, A
         super(StateActionVFNN4, self).__init__()
         self.layers_type = layers_type

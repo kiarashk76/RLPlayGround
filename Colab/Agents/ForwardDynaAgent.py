@@ -11,41 +11,42 @@ class ForwardDynaAgent(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardDynaAgent, self).__init__(params)
         self.model = {'forward': dict(network=params['model'],
-                                      step_size=0.1,
-                                      layers_type=['fc', 'fc'],
-                                      layers_features=[256, 64],
-                                      action_layer_number=3,
-                                      batch_size=8,
+                                      step_size=0.01,
+                                      layers_type=['fc'],
+                                      layers_features=[64],
+                                      action_layer_number=2,
+                                      batch_size=4,
                                       halluc_steps=2,
                                       training=True,
                                       plan_horizon=3,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
         self.true_model = params['true_model']
-    def initModel(self):
+    def initModel(self, state):
 
         if self.model['forward']['network'] is None:
             self.model['forward']['network'] = \
                 STModel.StateTransitionModel(
-                self.prev_state.shape,
+                state.shape,
                 len(self.action_list),
                 self.model['forward']['layers_type'],
                 self.model['forward']['layers_features'],
                 self.model['forward']['action_layer_number'])
             self.model['forward']['network'].to(self.device)
 
-    def trainModel(self, terminal=False):
+    def trainModel(self):
         if len(self.transition_buffer) >= self.model['forward']['batch_size']:
             transition_batch = self.getTransitionFromBuffer(n=self.model['forward']['batch_size'])
-            for sample in transition_batch:
-                state, action, reward, next_state, _ = sample
+            for transition in transition_batch:
                 if self.model['forward']['training'] is True:
-                    self._calculateGradients(self.model['forward'], state, action, next_state, terminal=terminal)
+                    self._calculateGradients(self.model['forward'], transition.prev_state,
+                                             transition.prev_action, transition.state)
 
-            step_size = self.model['forward']['step_size'] / len(sample_transitions)
-            self.updateNetworkWeights(self.model['forward']['network'], step_size)
+            self.updateNetworkWeights(self.model['forward']['network'],
+                                      self.model['forward']['step_size'])
 
     def plan(self):
+        return None
         self.updatePlanningBuffer(self.model['forward'], self.prev_state)
 
         for state in self.getStateFromPlanningBuffer(self.model['forward']):
@@ -70,48 +71,71 @@ class ForwardDynaAgent(BaseDynaAgent):
                 state = next_state
                 prev_action = action
 
-    def rolloutWithModel(self, state, action, model, rollout_policy=None, h=1):        
-        # get torch state and action, returns torch h future next state
-        x_old = state.float().unsqueeze(0).to(self.device)
-        action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
-        action_index = self.getActionIndex(action)
-        if len(model['layers_type']) + 1 == model['action_layer_number']:
-            pred_state = model['network'](x_old, action_onehot).detach()[:,action_index]
-        else:
-            pred_state = model['network'](x_old, action_onehot).detach()
+    def rolloutWithModel(self, state, action, model, h=1):
+        '''
+        :param state: torch -> (B, state_shape)
+        :param action: numpy array
+        :param model: model dictionary
+        :param rollout_policy: function
+        :param h: int
+        :return: next state and is_terminal
+        '''
+        current_state = torch.tensor(state.data.clone())
+        current_action = np.copy(action)
+        with torch.no_grad():
+            for i in range(h):
+                action_onehot = torch.from_numpy(self.getActionOnehot(current_action)).unsqueeze(0).to(self.device)
+                action_index = self.getActionIndex(current_action)
+                if len(model['layers_type']) + 1 == model['action_layer_number']:
+                    pred_state = model['network'](current_state, action_onehot)[0].detach()[:,action_index]
+                else:
+                    pred_state = model['network'](current_state, action_onehot)[0].detach()
 
-        if h == 1:
-            return pred_state[0]
-        else:
-            action = rollout_policy(pred_state)
-            return self.rolloutWithModel(pred_state[0], action, model, rollout_policy, h = h-1)
+                current_action = self.forwardRolloutPolicy(pred_state)
+                current_state = pred_state
+        return pred_state
 
     def forwardRolloutPolicy(self, state):
         return self.policy(state)
 
-
-
     def _calculateGradients(self, model, state, action, next_state, h=0, terminal=False):
         # todo: add hallucination training
         # state and next_state are tensor, action is numpy array
-        state = state.unsqueeze(0).float().to(self.device)
-        next_state = next_state.unsqueeze(0).float().to(self.device)
-        action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
-        action_index = self.getActionIndex(action)
-        if len(model['layers_type']) + 1 == model['action_layer_number']:
-            input = model['network'](state, action_onehot)[:, action_index]
+        if next_state is not None:
+            # not a terminal state
+            state = state.float().to(self.device)
+            next_state = next_state.float().to(self.device)
+            action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
+            action_index = self.getActionIndex(action)
+
+            #state transition training
+            if len(model['layers_type']) + 1 == model['action_layer_number']:
+                input = model['network'](state, action_onehot)[0][:, action_index]
+            else:
+                input = model['network'](state, action_onehot)[0]
+            target = next_state
+
+            assert target.shape == input.shape, 'target and input must have same shapes'
+            loss = nn.MSELoss()(input, target)
+            loss.backward()
+
+            #terminal training
+            input = model['network'](state, action_onehot)[1]
+            target = torch.tensor([0.0]).float().unsqueeze(0).to(self.device)
+            assert target.shape == input.shape, 'target and input must have same shapes'
+            loss = nn.MSELoss()(input, target)
+            loss.backward()
         else:
-            input = model['network'](state, action_onehot)
-        target = next_state
+            #no transition training needed
+            state = state.float().to(self.device)
+            action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
 
-        assert target.shape == input.shape, 'target and input must have same shapes'
-        loss = nn.MSELoss()(input, target)
-        loss.backward()
-
-    def getTransitionFromBuffer(self, n=1):
-        if len(self.transition_buffer) < n:
-            n = len(self.transition_buffer)
-        return random.choices(self.transition_buffer, k=n)
+            # terminal training
+            input = model['network'](state, action_onehot)[1]
+            target = torch.tensor([1.0]).float().unsqueeze(0).to(self.device)
+            assert target.shape == input.shape, 'target and input must have same shapes'
+            loss = nn.MSELoss()(input, target)
+            loss.backward()
 
 
     def updatePlanningBuffer(self, model, state):
