@@ -20,10 +20,10 @@ class BackwardDynaAgent(BaseDynaAgent):
                                        batch_counter=None,
                                        training=True,
                                        halluc_steps=2,
-                                       plan_steps=0,
-                                       plan_number=0,
-                                       plan_horizon=100,
-                                       plan_buffer_size=1,
+                                       plan_steps=2,
+                                       plan_number=5,
+                                       plan_horizon=1,
+                                       plan_buffer_size=4,
                                        plan_buffer=[])}
         self.true_model = params['true_model']
 
@@ -62,9 +62,10 @@ class BackwardDynaAgent(BaseDynaAgent):
                 terminal = self.is_terminal(state)
                 if terminal:
                     reward = 10
+                reward = torch.tensor(reward).unsqueeze(0).to(self.device)
                 x_old = prev_state.float().to(self.device)
                 x_new = state.float().to(self.device) if not terminal else None
-                self.updateValueFunction(reward, x_old, prev_action, x_new=x_new, action=action)
+                self.calculateGradientValueFunction('q', reward, x_old, prev_action, x_new, action)
                 action = prev_action
                 state = prev_state
 
