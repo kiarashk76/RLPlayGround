@@ -193,10 +193,15 @@ class GridWorldExperiment(BaseExperiment):
                 err = torch.mean((next_state - pred_state) ** 2)
 
             elif type == 'backward':
-                obs = torch.from_numpy(obs).to(self.device)
-                pred_state = self.agent.rolloutWithModel(torch.from_numpy(next_obs).to(self.device), action, model)
-                assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
-                err = torch.mean((obs - pred_state) ** 2)
+                state = self.agent.getStateRepresentation(obs)
+                next_state = self.agent.getStateRepresentation(next_obs)
+                prev_state = self.agent.rolloutWithModel(next_state, action, model)
+
+                # assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
+                err = torch.mean((state - prev_state) ** 2)
+
+
+
             else:
                 raise ValueError('type is not defined')
             sum += err
@@ -221,7 +226,7 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['forward'],
+                 model_type=['backward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],
@@ -367,7 +372,10 @@ class RunExperiment():
                     # model_error2 = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, n=10)
 
                 elif self.model_type[i] == 'backward':
-                    model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test, type='backward')
+                    model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test, type='backward',
+                                                                         true_transition_function=env.transitionFunctionBackward)
+                    model_error_list.append(model_error)
+                    # model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test, type='backward')
                     # model_error = experiment.calculateModelError(agent.model['backward'], env.transitionFunctionBackward)[0]
 
                 if self.model_type[i] != 'free':

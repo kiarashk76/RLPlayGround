@@ -13,7 +13,7 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.1,
                                       layers_type=['fc', 'fc'],
-                                      layers_features=[64, 32],
+                                      layers_features=[256, 32],
                                       action_layer_number=2,
                                       batch_size=8,
                                       halluc_steps=2,
@@ -46,6 +46,7 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         self.updateNetworkWeights(self.model['forward']['network'], step_size)
 
     def plan(self):
+        return
         self.updatePlanningBuffer(self.model['forward'], self.prev_state)
 
         for state in self.getStateFromPlanningBuffer(self.model['forward']):
@@ -98,12 +99,12 @@ class ForwardErrorDynaAgent(BaseDynaAgent):
         y = model_next_state.detach()
         # print(x)
         # print(y)
-        acc = (np.square(x - y)).mean()
+        # acc = (np.square(x - y)).mean()
 
         # print(acc, model_acc[0])
         self.sum_pred_model_error += model_acc[0]
         self.count_pred_model_error += 1
-        loss1 = nn.MSELoss()(model_next_state, next_state)
+        loss1 = nn.MSELoss()(model_next_state, x)
         # loss2 = nn.MSELoss()(model_acc[0], acc)
         loss2 = 0
         loss = loss1 + loss2

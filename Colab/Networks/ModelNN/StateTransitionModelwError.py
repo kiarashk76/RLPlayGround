@@ -60,7 +60,7 @@ class StateTransitionModelwError(nn.Module):
                     a = action.flatten(start_dim=1)
                     x = torch.cat((x.float(), a.float()), dim=1)
                 x = self.layers[i](x.float())
-                x = torch.tanh(x)
+                x = torch.relu(x)
             else:
                 raise ValueError("layer is not defined")
 
@@ -69,10 +69,11 @@ class StateTransitionModelwError(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         x = self.head(x.float())
-        x = torch.relu(x)
+        # x = torch.relu(x)
         pred_state, acc = x[0].split(self.state_size)
 
         if self.action_layer_num == len(self.layers_type) + 1:
+            print('dd')
             pred_state = pred_state.view((-1,) + (self.num_actions,) + state.shape[1:])
         else:
             pred_state = pred_state.view(state.shape)
