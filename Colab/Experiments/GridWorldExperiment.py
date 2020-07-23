@@ -14,6 +14,8 @@ from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+# from Colab.Agents.BackwardErrorDynaAgent import BackwardErrorDynaAgent as BackwardDynaAgent
+
 from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
 from Colab.Datasets.TransitionDataGrid import data_store
 
@@ -209,6 +211,8 @@ class GridWorldExperiment(BaseExperiment):
                 prev_state = self.agent.rolloutWithModel(next_state, action, model)
 
                 # assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
+                # print(state)
+                # print(prev_state)
                 err = torch.mean((state - prev_state) ** 2)
 
 
@@ -237,7 +241,7 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['forward'],
+                 model_type=['backward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],
@@ -344,7 +348,7 @@ class RunExperiment():
                 elif self.model_type[i] == 'backward':
                     if self.use_pre_trained[i]:
                         agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                   'gamma': 1.0, 'epsilon': 0.01,
+                                                   'gamma': 1.0, 'epsilon': 0.1,
                                                    'reward_function': reward_function,
                                                    'goal': goal,
                                                    'device': self.device,
@@ -352,7 +356,7 @@ class RunExperiment():
                                                    'true_model': env.transitionFunctionBackward})
                     else:
                         agent = BackwardDynaAgent({'action_list': np.asarray(env.getAllActions()),
-                                                  'gamma': 1.0, 'epsilon': 0.2,
+                                                  'gamma': 1.0, 'epsilon': 0.1,
                                                   'reward_function': reward_function,
                                                   'goal': goal,
                                                   'device': self.device,

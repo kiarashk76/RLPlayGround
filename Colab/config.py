@@ -2,7 +2,7 @@
 
 # # experiment
 num_runs = 1
-num_episode = 100
+num_episode = 500
 max_step_each_episode = 50
 
 # # environment
