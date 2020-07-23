@@ -5,6 +5,8 @@ import random
 
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 import Colab.Networks.ModelNN.StateTransitionModel as STModel
+import Colab.config as config, Colab.utils as utils
+
 
 
 class BackwardDynaAgent(BaseDynaAgent):
@@ -26,6 +28,9 @@ class BackwardDynaAgent(BaseDynaAgent):
                                        plan_buffer_size=4,
                                        plan_buffer=[])}
         self.true_model = params['true_model']
+        self.planning_transition_buffer = []
+        self.planning_transition_buffer_size = 20
+
 
     def initModel(self, state):
         if self.model['backward']['network'] is not None:
@@ -65,7 +70,15 @@ class BackwardDynaAgent(BaseDynaAgent):
                 reward = torch.tensor(reward).unsqueeze(0).to(self.device)
                 x_old = prev_state.float().to(self.device)
                 x_new = state.float().to(self.device) if not terminal else None
-                self.calculateGradientValueFunction('q', reward, x_old, prev_action, x_new, action)
+                self.update_planning_transition_buffer(utils.transition(x_old, prev_action, reward,
+                                                     x_new, action, terminal, self.time_step))
+
+                if self._vf['q']['training']:
+                    if len(self.planning_transition_buffer) >= self._vf['q']['batch_size']:
+                        transition_batch = self.getTransitionFromPlanningBuffer(n=self._vf['q']['batch_size'])
+                        self.updateValueFunction(transition_batch, 'q')
+
+
                 action = prev_action
                 state = prev_state
 
@@ -124,3 +137,16 @@ class BackwardDynaAgent(BaseDynaAgent):
 
     def is_terminal(self, state):
         return np.array_equal(state, self.goal)
+
+    def getTransitionFromPlanningBuffer(self, n):
+        if len(self.planning_transition_buffer) < n:
+            n = len(self.planning_transition_buffer)
+        return random.choices(self.planning_transition_buffer, k=n)
+
+    def update_planning_transition_buffer(self, transition):
+        self.planning_transition_buffer.append(transition)
+        if len(self.planning_transition_buffer) > self.planning_transition_buffer_size:
+            self.removeFromPlanningTransitionBuffer()
+
+    def removeFromPlanningTransitionBuffer(self):
+        self.planning_transition_buffer.pop(0)
