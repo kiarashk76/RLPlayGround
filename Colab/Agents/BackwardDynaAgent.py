@@ -12,11 +12,11 @@ class BackwardDynaAgent(BaseDynaAgent):
         super(BackwardDynaAgent, self).__init__(params)
         self.model_batch_counter = 0
         self.model = {'backward': dict(network=params['model'],
-                                       step_size=0.1,
-                                       layers_type=['fc', 'fc'],
-                                       layers_features=[256, 64],
-                                       action_layer_number=3,
-                                       batch_size=8,
+                                       step_size=0.01,
+                                       layers_type=['fc'],
+                                       layers_features=[64],
+                                       action_layer_number=2,
+                                       batch_size=4,
                                        batch_counter=None,
                                        training=True,
                                        halluc_steps=2,

@@ -45,17 +45,20 @@ class StateTransitionModel(nn.Module):
             else:
                 raise ValueError("layer is not defined")
 
-        if self.action_layer_num == len(self.layers_type):
+        if self.action_layer_num < len(self.layers_type):
+            self.head = nn.Linear(layers_features[-1], state_size)
+            self.is_terminal = nn.Linear(layers_features[-1], 1)
+
+        elif self.action_layer_num == len(self.layers_type):
             self.head = nn.Linear(layers_features[-1] + num_actions, state_size)
             self.is_terminal = nn.Linear(layers_features[-1] + num_actions, 1)
 
         elif self.action_layer_num == len(self.layers_type) + 1:
-            self.head = nn.Linear(layers_features[-1] , self.num_actions * state_size)
-            self.is_terminal = nn.Linear(layers_features[-1], 1)
+            self.head = nn.Linear(layers_features[-1], self.num_actions * state_size)
+            self.is_terminal = nn.Linear(layers_features[-1], self.num_actions * 1)
 
         else:
-            self.head = nn.Linear(layers_features[-1], state_size + 1)
-            self.is_terminal = nn.Linear(layers_features[-1], 1)
+            raise ValueError("action layer number is out of range")
 
 
 
@@ -83,10 +86,11 @@ class StateTransitionModel(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         head = self.head(x.float())
-        is_terminal = self.is_terminal(x.float())
+        is_terminal = torch.sigmoid(5 * self.is_terminal(x.float()))
 
         if self.action_layer_num == len(self.layers_type) + 1:
-            return head.view((-1,) + (self.num_actions,) + state.shape[1:]), is_terminal  # -1 is for the batch size
+            return head.view((-1,) + (self.num_actions,) + state.shape[1:]), \
+                   is_terminal.view((-1,) + (self.num_actions,) + (1,))  # -1 is for the batch size
         else:
             return head.view(state.shape), is_terminal #
 

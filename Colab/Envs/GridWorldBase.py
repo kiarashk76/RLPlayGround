@@ -279,13 +279,13 @@ class GridWorld():
         reward = self.__rewardFunction(pos)
         return reward
 
-    def transitionFunction(self, state, action, state_type= 'full_obs'):
+    def transitionFunction(self, state, action, state_type= 'coord'):
         pos = self.stateToPos(state, state_type)
         pos = self.__transitionFunction(pos, action)
         next_state = self.posToState(pos, state_type)
         return next_state
 
-    def fullTransitionFunction(self, state, action, state_type='full_obs'):
+    def fullTransitionFunction(self, state, action, state_type='coord'):
         pos = self.stateToPos(state, state_type)
         pos = self.__transitionFunction(pos, action)
         is_terminal = self.__terminalFunction(pos)
@@ -293,7 +293,7 @@ class GridWorld():
         next_state = self.posToState(pos, state_type)
         return next_state, is_terminal, reward
 
-    def transitionFunctionBackward(self, state, prev_action, state_type='full_obs', type='expectation'):
+    def transitionFunctionBackward(self, state, prev_action, state_type='coord', type='sample'):
         if type == 'expectation':
             pos = self.stateToPos(state, state_type)
             possible_prev_states = []

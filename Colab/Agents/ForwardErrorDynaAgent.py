@@ -4,9 +4,35 @@ import numpy as np
 import random
 
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 import Colab.Networks.ModelNN.StateTransitionModelwError as Model
 
-class ForwardErrorDynaAgent(BaseDynaAgent):
+class ForwardErrorDynaAgent(ForwardDynaAgent):
+    def initModelError(self):
+
+    def calculateModelError(self, state, action, pred_next_state):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ForwardErrorDynaAgent2(BaseDynaAgent):
     def __init__(self, params):
         super(ForwardErrorDynaAgent, self).__init__(params)
         self.model_pred_error = []
