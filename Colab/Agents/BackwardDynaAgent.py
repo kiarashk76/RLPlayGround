@@ -16,20 +16,20 @@ class BackwardDynaAgent(BaseDynaAgent):
         self.model = {'backward': dict(network=params['model'],
                                        step_size=0.01,
                                        layers_type=['fc'],
-                                       layers_features=[64],
+                                       layers_features=[32],
                                        action_layer_number=2,
                                        batch_size=4,
                                        batch_counter=None,
                                        training=True,
                                        halluc_steps=2,
                                        plan_steps=2,
-                                       plan_number=5,
+                                       plan_number=1,
                                        plan_horizon=1,
-                                       plan_buffer_size=4,
+                                       plan_buffer_size=1,
                                        plan_buffer=[])}
         self.true_model = params['true_model']
         self.planning_transition_buffer = []
-        self.planning_transition_buffer_size = 20
+        self.planning_transition_buffer_size = 10
 
 
     def initModel(self, state):
@@ -57,30 +57,28 @@ class BackwardDynaAgent(BaseDynaAgent):
         self.updateNetworkWeights(self.model['backward']['network'], step_size)
 
     def plan(self):
-        self.updatePlanningBuffer(self.model['backward'], self.state)
-        for state in self.getStateFromPlanningBuffer(self.model['backward']):
-            action = self.policy(state)
-            for j in range(self.model['backward']['plan_horizon']):
-                prev_action = self.backwardRolloutPolicy(state)
-                prev_state = self.rolloutWithModel(state, prev_action, self.model['backward'])
-                reward = -1
-                terminal = self.is_terminal(state)
-                if terminal:
-                    reward = 10
-                reward = torch.tensor(reward).unsqueeze(0).to(self.device)
-                x_old = prev_state.float().to(self.device)
-                x_new = state.float().to(self.device) if not terminal else None
-                self.update_planning_transition_buffer(utils.transition(x_old, prev_action, reward,
-                                                     x_new, action, terminal, self.time_step))
-
-                if self._vf['q']['training']:
-                    if len(self.planning_transition_buffer) >= self._vf['q']['batch_size']:
-                        transition_batch = self.getTransitionFromPlanningBuffer(n=self._vf['q']['batch_size'])
-                        self.updateValueFunction(transition_batch, 'q')
-
-
-                action = prev_action
-                state = prev_state
+        if self._vf['q']['training']:
+            if len(self.planning_transition_buffer) >= self._vf['q']['batch_size']:
+                transition_batch = self.getTransitionFromPlanningBuffer(n=self._vf['q']['batch_size'])
+                self.updateValueFunction(transition_batch, 'q')
+        with torch.no_grad():
+            self.updatePlanningBuffer(self.model['backward'], self.state)
+            for state in self.getStateFromPlanningBuffer(self.model['backward']):
+                action = self.policy(state)
+                for j in range(self.model['backward']['plan_horizon']):
+                    prev_action = self.backwardRolloutPolicy(state)
+                    prev_state = self.rolloutWithModel(state, prev_action, self.model['backward'])
+                    reward = -1
+                    terminal = self.isTerminal(state)
+                    if terminal:
+                        reward = 10
+                    reward = torch.tensor(reward).unsqueeze(0).to(self.device)
+                    x_old = prev_state.float().to(self.device)
+                    x_new = state.float().to(self.device) if not terminal else None
+                    self.update_planning_transition_buffer(utils.transition(x_old, prev_action, reward,
+                                                         x_new, action, terminal, self.time_step))
+                    action = prev_action
+                    state = prev_state
 
     def rolloutWithModel(self, state, action, model, h=1):
         current_state = torch.tensor(state.data.clone())
@@ -135,8 +133,9 @@ class BackwardDynaAgent(BaseDynaAgent):
         number_of_samples = min(model['plan_number'], len(model['plan_buffer']))
         return random.choices(model['plan_buffer'], k=number_of_samples)
 
-    def is_terminal(self, state):
-        return np.array_equal(state, self.goal)
+    def isTerminal(self, state):
+        diff = np.abs(np.multiply(self.goal, state)).sum()
+        return diff <= 2
 
     def getTransitionFromPlanningBuffer(self, n):
         if len(self.planning_transition_buffer) < n:

@@ -225,8 +225,8 @@ class GridWorld():
             # choose a random action
             action = self.getAllActions()[random.randint(0, len(self.getAllActions()) - 1)]
 
-        next_pos = tuple(sum(x) for x in zip(pos, action)) #stochastic backward
-        # next_pos = tuple(sum(x) % self._grid_shape[i] for i,x in enumerate(zip(pos, action))) #deterministic backward
+        # next_pos = tuple(sum(x) for x in zip(pos, action)) #stochastic backward
+        next_pos = tuple(sum(x) % self._grid_shape[i] for i,x in enumerate(zip(pos, action))) #deterministic backward
         if self.checkPosInsideGrid(next_pos) and next_pos not in self._obstacles_pos:
             return next_pos
         return pos

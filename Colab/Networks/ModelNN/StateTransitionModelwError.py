@@ -14,7 +14,7 @@ class StateTransitionModelwError(nn.Module):
         self.num_actions = num_actions
 
         # self.state_size = state_shape[0] * state_shape[1] * state_shape[2]
-        self.state_size = state_shape[0]
+        self.state_size = state_shape[1]
 
         for i, layer in enumerate(layers_type):
             if layer == 'conv':
@@ -37,15 +37,28 @@ class StateTransitionModelwError(nn.Module):
             else:
                 raise ValueError("layer is not defined")
 
-        if self.action_layer_num == len(self.layers_type):
-            self.head = nn.Linear(layers_features[-1] + num_actions, self.state_size + 1)
+        if self.action_layer_num < len(self.layers_type):
+            self.head = nn.Linear(layers_features[-1], self.state_size)
+            self.is_terminal = nn.Linear(layers_features[-1], 1)
+            self.certainty = nn.Linear(layers_features[-1], 1)
+
+        elif self.action_layer_num == len(self.layers_type):
+            self.head = nn.Linear(layers_features[-1] + self.num_actions, self.state_size)
+            self.is_terminal = nn.Linear(layers_features[-1] + self.num_actions, 1)
+            self.certainty = nn.Linear(layers_features[-1] + self.num_actions, 1)
 
         elif self.action_layer_num == len(self.layers_type) + 1:
-            self.head = nn.Linear(layers_features[-1], self.num_actions * self.state_size + 1)
+            self.head = nn.Linear(layers_features[-1], self.num_actions * self.state_size)
+            self.is_terminal = nn.Linear(layers_features[-1], self.num_actions * 1)
+            self.certainty = nn.Linear(layers_features[-1], self.num_actions * 1)
+
         else:
-            self.head = nn.Linear(layers_features[-1], self.state_size + 1)
+            raise ValueError("action layer number is out of range")
+
 
     def forward(self, state, action = None):
+
+
         if self.action_layer_num == len(self.layers) + 1 and action is None:
             raise ValueError("action is not given")
         x = 0
@@ -68,13 +81,13 @@ class StateTransitionModelwError(nn.Module):
             a = action.flatten(start_dim=1)
             x = torch.cat((x.float(), a.float()), dim=1)
 
-        x = self.head(x.float())
-        # x = torch.relu(x)
-        pred_state, acc = x[0].split(self.state_size)
+        head = self.head(x.float())
+        is_terminal = torch.sigmoid(5 * self.is_terminal(x.float()))
+        certainty = torch.sigmoid(self.certainty(x.float()))
 
         if self.action_layer_num == len(self.layers_type) + 1:
-            print('dd')
-            pred_state = pred_state.view((-1,) + (self.num_actions,) + state.shape[1:])
+            return head.view((-1,) + (self.num_actions,) + state.shape[1:]), \
+                   is_terminal.view((-1,) + (self.num_actions,) + (1,)), \
+                   certainty.view((-1,) + (self.num_actions,) + (1,))
         else:
-            pred_state = pred_state.view(state.shape)
-        return pred_state, acc
+            return head.view(state.shape), is_terminal, certainty
