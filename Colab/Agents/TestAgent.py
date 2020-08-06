@@ -101,3 +101,6 @@ class TestAgent(ForwardDynaAgent):
                 pred_error = model_error[h]['network'](current_state, action_onehot).detach()
 
         return pred_error
+
+    def plan(self):
+        pass
