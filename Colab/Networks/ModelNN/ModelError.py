@@ -10,9 +10,9 @@ import torchvision
 from Colab.Datasets.TransitionDataGrid import data_store
 import Colab.utils as utils
 
-class StateTransitionModel(nn.Module):
+class ModelError(nn.Module):
     def __init__(self, state_shape, num_actions, layers_type, layers_features, action_layer_num):
-        super(StateTransitionModel, self).__init__()
+        super(ModelError, self).__init__()
         # state : B, state_size(linear)
         # action: A
         self.layers_type = layers_type
@@ -32,7 +32,7 @@ class StateTransitionModel(nn.Module):
                     # insert action to this layer
                     action_shape_size = num_actions
                 if i == 0:
-                    linear_input_size = 2 * state_size + action_shape_size
+                    linear_input_size = state_size + action_shape_size
                     layer = nn.Linear(linear_input_size, layers_features[i])
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
@@ -57,7 +57,7 @@ class StateTransitionModel(nn.Module):
 
 
 
-    def forward(self, state, action, pred_next_state):
+    def forward(self, state, action):
         x = 0
         for i, layer in enumerate(self.layers_type):
             if layer == 'conv':
@@ -79,10 +79,8 @@ class StateTransitionModel(nn.Module):
             x = torch.cat((x.float(), a.float()), dim=1)
 
         head = self.head(x.float())
-        is_terminal = torch.sigmoid(5 * self.is_terminal(x.float()))
 
         if self.action_layer_num == len(self.layers_type) + 1:
-            return head.view((-1,) + (self.num_actions,) + state.shape[1:]), \
-                   is_terminal.view((-1,) + (self.num_actions,) + (1,))  # -1 is for the batch size
+            return head.view((-1,) + (self.num_actions,) + (1,))
         else:
-            return head.view(state.shape), is_terminal #
+            return head

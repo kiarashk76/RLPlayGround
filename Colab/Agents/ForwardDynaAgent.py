@@ -47,6 +47,7 @@ class ForwardDynaAgent(BaseDynaAgent):
                                       self.model['forward']['step_size'])
 
     def plan(self):
+        return 0
         with torch.no_grad():
             current_state = torch.tensor(self.prev_state.data.clone())
             true_current_state = self.prev_state.cpu().numpy()[0]

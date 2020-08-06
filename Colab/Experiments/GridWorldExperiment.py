@@ -14,6 +14,7 @@ from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+from Colab.Agents.TestAgent import TestAgent
 from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
 from Colab.Datasets.TransitionDataGrid import data_store
 
@@ -43,9 +44,12 @@ class GridWorldExperiment(BaseExperiment):
         self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
-        if self._render_on and self.num_episodes >= 0:
+        if self._render_on and self.num_episodes >= 1:
             # self.environment.render()
-            self.environment.render(values=self.calculateValues())
+            # self.environment.render(values=self.calculateValues())
+            # self.environment.render(values= self.modelErrorCalculatedByAgent(self.agent.model_error))
+            self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
+                                                                     self.environment.transitionFunction)[1])
             # self.environment.render(values= self.calculateModelError(self.agent.model['backward'],
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
@@ -102,6 +106,17 @@ class GridWorldExperiment(BaseExperiment):
                 values[(pos), tuple(a)] = round(self.agent.getStateActionValue(s_torch, a, vf_type='q').item(), 3)
                     # self.agent.vf['q']['network'](s_torch).detach()[:,self.agent.getActionIndex(a)].item(),3)
         return values
+
+    def modelErrorCalculatedByAgent(self, model_error):
+        states = self.environment.getAllStates()
+        actions = self.environment.getAllActions()
+        errors = {}
+        for s in states:
+            pos = self.environment.stateToPos(s)
+            for a in actions:
+                s_torch = self.agent.getStateRepresentation(s)
+                errors[(pos), tuple(a)] = round(self.agent.getModelError(s_torch, a, model_error).item(), 3)
+        return errors
 
     def calculateModelError2(self, model, true_transition_function):
         sum = 0.0
@@ -237,15 +252,13 @@ class GridWorldExperiment(BaseExperiment):
 
 class RunExperiment():
     def __init__(self, random_agent=[False, False],
-                 model_type=['forward'],
+                 model_type=['backward'],
                  pre_trained=[False, False], use_pre_trained=[False, False],
                  show_pre_trained_error_grid=[False, False],
                  show_values_grid=[False, False],
                  show_model_error_grid=[False, False]):
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # if model_type != 'forward' and model_type != 'backward' and model_type != 'free':
-        #     raise ValueError("model type not defined")
         self.model_type = model_type
         self.pre_trained = pre_trained
         self.use_pre_trained = use_pre_trained
@@ -472,3 +485,35 @@ class RunExperiment():
           utils.draw_plot(range(len(mean_steps_list[i])), mean_steps_list[i], xlabel='episode_num', ylabel='num_steps',
                           show=False, title=self.model_type, label=self.model_type[i])
         plt.show()
+
+class TestExperiment(RunExperiment):
+    def run_experiment(self):
+        num_runs = config.num_runs
+        num_episode = config.num_episode
+        max_step_each_episode = config.max_step_each_episode
+        for r in range(num_runs):
+            env = GridWorld(params=config.empty_room_params)
+            reward_function = env.rewardFunction
+            goal = np.asarray(env.posToState((0, config._n - 1), state_type='coord'))
+            agent = TestAgent( {'action_list': np.asarray(env.getAllActions()),
+                                      'gamma': 1.0, 'epsilon': 0.1,
+                                      'reward_function': reward_function,
+                                      'goal': goal,
+                                      'device': self.device,
+                                      'model': None,
+                                      'true_model': env.fullTransitionFunction})
+            experiment = GridWorldExperiment(agent, env, self.device)
+            for e in range(num_episode):
+                print("starting episode ", e + 1)
+                experiment.runEpisode(max_step_each_episode)
+
+            utils.draw_grid((config._n, config._n), (900, 900),
+                            state_action_values=experiment.calculateModelError(agent.model['forward'],
+                                                                               env.transitionFunction)[1],
+                            all_actions=env.getAllActions(),
+                            obstacles_pos=env.get_obstacles_pos())
+
+            utils.draw_grid((config._n, config._n), (900, 900),
+                            state_action_values=experiment.modelErrorCalculatedByAgent(agent.model_error),
+                            all_actions=env.getAllActions(),
+                            obstacles_pos=env.get_obstacles_pos())
