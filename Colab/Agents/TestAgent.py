@@ -5,10 +5,10 @@ import torch.nn as nn
 import numpy as np
 import random
 
-from Agents.ForwardDynaAgent import ForwardDynaAgent
-from Agents.BackwardDynaAgent import BackwardDynaAgent
-from Agents.BaseDynaAgent import BaseDynaAgent
-from Networks.ModelNN.ModelError import ModelError
+from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
+from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+from Colab.Networks.ModelNN.ModelError import ModelError
 
 
 class TestAgent(ForwardDynaAgent):

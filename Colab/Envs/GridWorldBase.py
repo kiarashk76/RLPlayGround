@@ -362,7 +362,6 @@ class GridWorld():
         # This sets the WIDTH and HEIGHT of each grid location
         WIDTH = int(self._window_size[0] / grid.shape[1])
         HEIGHT = int(self._window_size[1] / grid.shape[0])
-
         # This sets the margin between each cell
         MARGIN = 1
 

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
+from Colab.Envs.GridWorldRooms import GridWorldRooms
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 # from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as ForwardDynaAgent
 
@@ -24,7 +25,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if   params is None:
-            params = {'render': False}
+            params = {'render': True}
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
@@ -45,11 +46,11 @@ class GridWorldExperiment(BaseExperiment):
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes >= 1:
-            # self.environment.render()
+            self.environment.render()
             # self.environment.render(values=self.calculateValues())
             # self.environment.render(values= self.modelErrorCalculatedByAgent(self.agent.model_error))
-            self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
-                                                                     self.environment.transitionFunction)[1])
+            # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
+            #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values= self.calculateModelError(self.agent.model['backward'],
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
@@ -492,7 +493,7 @@ class TestExperiment(RunExperiment):
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
         for r in range(num_runs):
-            env = GridWorld(params=config.empty_room_params)
+            env = GridWorldRooms(params=config.n_room_params)
             reward_function = env.rewardFunction
             goal = np.asarray(env.posToState((0, config._n - 1), state_type='coord'))
             agent = TestAgent( {'action_list': np.asarray(env.getAllActions()),
