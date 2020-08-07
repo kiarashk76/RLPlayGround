@@ -5,13 +5,16 @@ import random
 
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 import Colab.Networks.ModelNN.StateTransitionModel as STModel
-import Colab.config as config, Colab.utils as utils
+import Colab.utils as utils
 
 
 
 class BackwardDynaAgent(BaseDynaAgent):
+    name = 'BackwardDynaAgent'
+
     def __init__(self, params):
         super(BackwardDynaAgent, self).__init__(params)
+
         self.model_batch_counter = 0
         self.model = {'backward': dict(network=params['model'],
                                        step_size=0.01,
@@ -27,7 +30,7 @@ class BackwardDynaAgent(BaseDynaAgent):
                                        plan_horizon=1,
                                        plan_buffer_size=1,
                                        plan_buffer=[])}
-        self.true_model = params['true_model']
+        self.true_model = params['true_bw_model']
         self.planning_transition_buffer = []
         self.planning_transition_buffer_size = 10
 

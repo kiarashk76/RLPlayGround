@@ -9,13 +9,14 @@ import matplotlib.pyplot as plt
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
 from Colab.Envs.GridWorldRooms import GridWorldRooms
-from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 # from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as ForwardDynaAgent
 
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
 from Colab.Agents.TestAgent import TestAgent
+
 from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
 from Colab.Datasets.TransitionDataGrid import data_store
 
@@ -25,7 +26,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if   params is None:
-            params = {'render': True}
+            params = {'render': False}
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
@@ -371,7 +372,7 @@ class RunExperiment():
                                                   'goal': goal,
                                                   'device': self.device,
                                                   'model': None,
-                                                  'true_model': env.transitionFunctionBackward})
+                                                  'true_bw_model': env.transitionFunctionBackward})
                 elif self.model_type[i] == 'free':
                     agent = BaseDynaAgent({'action_list': np.asarray(env.getAllActions()),
                                             'gamma':1.0, 'epsilon': 0.1,
@@ -419,9 +420,9 @@ class RunExperiment():
             # model_val_error_run_list.append(model_val_error_list)
             model_error_run_num_samples.append(model_error_num_samples)
             
-            # utils.draw_plot(model_error_num_samples, model_error_list,
-            #               xlabel='num_samples', ylabel='model_error', show=True,
-            #               label=self.model_type[i], title=self.model_type[i])
+            utils.draw_plot(model_error_num_samples, model_error_list,
+                          xlabel='num_samples', ylabel='model_error', show=True,
+                          label=self.model_type[i], title=self.model_type[i])
             #
             utils.draw_plot(range(len(num_steps_run_list[r])), num_steps_run_list[r],
                           xlabel='episode_num', ylabel='num_steps', show=True,
@@ -488,6 +489,7 @@ class RunExperiment():
         plt.show()
 
 class TestExperiment(RunExperiment):
+
     def run_experiment(self):
         num_runs = config.num_runs
         num_episode = config.num_episode
@@ -518,3 +520,158 @@ class TestExperiment(RunExperiment):
                             state_action_values=experiment.modelErrorCalculatedByAgent(agent.model_error),
                             all_actions=env.getAllActions(),
                             obstacles_pos=env.get_obstacles_pos())
+
+
+class RunExperiment2():
+    def __init__(self):
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.agents = config.agent_list
+        self.pre_trained = config.pre_trained
+        self.show_pre_trained_error_grid = config.show_pre_trained_error_grid
+        self.show_values_grid = config.show_values_grid
+        self.show_model_error_grid = config.show_model_error_grid
+
+        # Assuming that we are on a CUDA machine, this should print a CUDA device:
+        print(self.device)
+
+    def run_experiment(self):
+        num_runs = config.num_runs
+        num_episode = config.num_episode
+        max_step_each_episode = config.max_step_each_episode
+        self.num_steps_run_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
+        self.model_error_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.float)
+        self.model_error_samples = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
+
+        agent_counter = -1
+
+        for agent_class, pre_train in zip(self.agents, self.pre_trained):
+            agent_counter += 1
+            pre_trained_plot_y_run_list = []
+            pre_trained_plot_x_run_list = []
+
+
+            for r in range(num_runs):
+                print("starting runtime ", r+1)
+                env = GridWorld(params=config.empty_room_params)
+                train, test = data_store(env)
+                reward_function = env.rewardFunction
+                goal = np.asarray(env.posToState((0, config._n - 1), state_type='coord'))
+
+                # Pre-train the model
+                pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x = \
+                    self.pretrain_model(pre_train, env)
+                pre_trained_plot_y_run_list.append(pre_trained_plot_y)
+                pre_trained_plot_x_run_list.append(pre_trained_plot_x)
+
+                # initializing the agent
+                agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
+                                       'gamma': 1.0, 'epsilon': 0.1,
+                                       'reward_function': reward_function,
+                                       'goal': goal,
+                                       'device': self.device,
+                                       'model': pre_trained_model,
+                                       'true_bw_model': env.transitionFunctionBackward,
+                                       'true_fw_model': env.fullTransitionFunction})
+
+                # make an instance of the experiment for (agent, env)
+                experiment = GridWorldExperiment(agent, env, self.device)
+
+                for e in range(num_episode):
+                    print("starting episode ", e + 1)
+                    experiment.runEpisode(max_step_each_episode)
+                    self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
+                    if agent.name != 'BaseDynaAgent':
+                        model_type = list(agent.model.keys())[0]
+                        model_error = experiment.calculateModelErrorWithData(agent.model[model_type],
+                                                                         test,
+                                                                         type=str(model_type),
+                                                                         true_transition_function=env.transitionFunction)
+                        self.model_error_list[agent_counter, r, e] = model_error
+                        self.model_error_samples[agent_counter, r, e] = experiment.num_samples
+
+
+
+        self.show_model_error_plot()
+        # self.show_num_steps_plot()
+
+
+
+    def pretrain_model(self, model_type, env):
+        if model_type == 'forward':
+            pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x = preTrainForward(
+                env, self.device)
+        elif model_type == 'backward':
+            pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x = preTrainBackward(
+                env, self.device)
+        elif model_type is None:
+            return None, None, None, None
+        else:
+            raise ValueError("model type not defined")
+
+        return pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x
+    def show_num_steps_plot(self):
+        if False:
+            for a in range(self.num_steps_run_list.shape[0]):
+                agent_name = self.agents[a].name
+                for r in range(self.num_steps_run_list.shape[1]):
+                    utils.draw_plot(range(len(self.num_steps_run_list[a,r])), self.num_steps_run_list[a,r],
+                            xlabel='episode_num', ylabel='num_steps', show=True,
+                            label=agent_name, title='run_number '+str(r+1))
+        if True:
+            for a in range(self.num_steps_run_list.shape[0]):
+                agent_name = self.agents[a].name
+                average_num_steps_run = np.mean(self.num_steps_run_list[a], axis=0)
+                utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                        xlabel='episode_num', ylabel='num_steps', show=False,
+                        label=agent_name, title= 'average over runs')
+            plt.show()
+    def show_model_error_plot(self):
+        for a in range(self.model_error_list.shape[0]):
+            agent_name = self.agents[a].name
+            for r in range(self.model_error_list.shape[1]):
+                utils.draw_plot(range(len(self.model_error_samples[a, r])), self.model_error_list[a, r],
+                                xlabel='num_samples', ylabel='model_error', show=True,
+                                label=agent_name, title='run_number ' + str(r + 1))
+
+    #
+    # def calculate_model_error(self):
+    #     if self.model_type[i] == 'forward':
+    #         model_error = experiment.calculateModelErrorWithData(agent.model['forward'], test,
+    #                                                              type='forward',
+    #                                                              true_transition_function=env.transitionFunction)
+    #         model_error_list.append(model_error)
+    #         # model_error, model_val_error = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, vf=agent.getStateActionValue)
+    #         # model_error2 = experiment.calculateModelErrorNStep(agent.model['forward'], env.transitionFunction, n=10)
+    #
+    #     elif self.model_type[i] == 'backward':
+    #         model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test,
+    #                                                              type='backward',
+    #                                                              true_transition_function=env.transitionFunctionBackward)
+    #         model_error_list.append(model_error)
+    #         # model_error = experiment.calculateModelErrorWithData(agent.model['backward'], test, type='backward')
+    #         # model_error = experiment.calculateModelError(agent.model['backward'], env.transitionFunctionBackward)[0]
+    #
+    # def show_model_error_grid(self):
+    #     # if self.show_pre_trained_error_grid and self.pre_trained:
+    #     agent = RandomDynaAgent({'action_list': np.asarray(env.getAllActions()),
+    #                              'gamma': 1.0, 'epsilon': 1.0,
+    #                              'reward_function': reward_function,
+    #                              'goal': goal,
+    #                              'device': self.device,
+    #                              'model': pre_trained_model,
+    #                              'training': False})
+    #     experiment = GridWorldExperiment(agent, env, self.device)
+    #     experiment.visit_counts = pre_trained_visit_counts
+    #     if self.model_type == 'forward':
+    #         utils.draw_grid((config._n, config._n), (900, 900),
+    #                         state_action_values=experiment.calculateModelError(agent.model['forward'],
+    #                                                                            env.transitionFunction)[1],
+    #                         all_actions=env.getAllActions(),
+    #                         obstacles_pos=env.get_obstacles_pos())
+    #     elif self.model_type == 'backward':
+    #         utils.draw_grid((config._n, config._n), (900, 900),
+    #                         state_action_values=experiment.calculateModelError(agent.model['backward'],
+    #                                                                            env.transitionFunction)[1],
+    #                         all_actions=env.getAllActions(),
+    #                         obstacles_pos=env.get_obstacles_pos())

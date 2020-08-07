@@ -7,7 +7,7 @@ import torch.optim as optim
 from abc import abstractmethod
 import random
 
-import Colab.config as config, Colab.utils as utils
+import Colab.utils as utils
 from Colab.Agents.BaseAgent import BaseAgent
 from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN3, StateActionVFNN4
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
@@ -611,6 +611,8 @@ class BaseDynaAgent3(BaseAgent):
 
 
 class BaseDynaAgent(BaseAgent):
+    name = 'BaseDynaAgent'
+
     def __init__(self, params={}):
         self.time_step = 0
         self.writer = SummaryWriter()

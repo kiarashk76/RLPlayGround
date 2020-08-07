@@ -9,8 +9,11 @@ import Colab.Networks.ModelNN.StateTransitionModel as STModel
 import Colab.utils as utils
 
 class ForwardDynaAgent(BaseDynaAgent):
+    name = 'ForwardDynaAgent'
+
     def __init__(self, params):
         super(ForwardDynaAgent, self).__init__(params)
+
         self.model = {'forward': dict(network=params['model'],
                                       step_size=0.01,
                                       layers_type=['fc'],
@@ -22,7 +25,7 @@ class ForwardDynaAgent(BaseDynaAgent):
                                       plan_horizon=3,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
-        self.true_model = params['true_model']
+        self.true_model = params['true_fw_model']
     def initModel(self, state):
 
         if self.model['forward']['network'] is None:

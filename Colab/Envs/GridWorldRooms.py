@@ -1,8 +1,3 @@
-import collections
-import numpy as np
-import pygame
-import random
-import Colab.config as config
 
 from Colab.Envs.GridWorldBase import GridWorld
 class GridWorldRooms(GridWorld):
