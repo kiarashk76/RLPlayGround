@@ -55,8 +55,6 @@ class ModelError(nn.Module):
         else:
             raise ValueError("action layer number is out of range")
 
-
-
     def forward(self, state, action):
         x = 0
         for i, layer in enumerate(self.layers_type):
