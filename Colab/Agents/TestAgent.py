@@ -313,7 +313,7 @@ class BackwardDynaAgent(BaseDynaAgent):
         return random.choices(model['plan_buffer'], k=number_of_samples)
 
     def isTerminal(self, state):
-        diff = np.abs(np.multiply(self.goal, state)).sum()
+        diff = np.abs(np.multiply(self.goal, state.cpu().numpy())).sum()
         return diff <= 2
 
     def getTransitionFromPlanningBuffer(self, n):

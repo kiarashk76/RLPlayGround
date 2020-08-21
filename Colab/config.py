@@ -6,8 +6,8 @@ from Colab.Agents.TestAgent import BackwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
-num_runs = 10
-num_episode = 100
+num_runs = 2
+num_episode = 10
 max_step_each_episode = 50
 
 agent_list = [BackwardDynaAgent, BackwardDynaAgent]
