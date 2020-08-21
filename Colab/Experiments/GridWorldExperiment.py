@@ -591,7 +591,7 @@ class RunExperiment2():
 
 
             for r in range(num_runs):
-                # print("starting runtime ", r+1)
+                print("starting runtime ", r+1)
                 env = GridWorld(params=config.empty_room_params)
                 train, test = data_store(env)
                 reward_function = env.rewardFunction
@@ -621,7 +621,7 @@ class RunExperiment2():
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    print("starting episode ", e + 1)
+                    # print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
