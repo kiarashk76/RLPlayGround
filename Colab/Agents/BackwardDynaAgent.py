@@ -49,7 +49,7 @@ class BackwardDynaAgent(BaseDynaAgent):
         self.model['backward']['batch_counter'] = 0
 
     def trainModel(self, terminal=False):
-        if len(self.transition_buffer) < self._vf['q']['batch_size']:
+        if len(self.transition_buffer) < self.model['backward']['batch_size']:
             return
         transition_batch = self.getTransitionFromBuffer(n=self.model['backward']['batch_size'])
         for i, data in enumerate(transition_batch):
@@ -107,8 +107,8 @@ class BackwardDynaAgent(BaseDynaAgent):
         # todo: add hallucination training
         if next_state is None:
             return
-        state = state.float().unsqueeze(0)
-        next_state = next_state.float().unsqueeze(0)
+        state = state.float()
+        next_state = next_state.float()
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         action_index = self.getActionIndex(action)
 

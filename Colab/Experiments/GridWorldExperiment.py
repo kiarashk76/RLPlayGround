@@ -15,7 +15,7 @@ from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
 from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
-from Colab.Agents.TestAgent import TestAgent
+# from Colab.Agents.TestAgent import TestAgent
 
 from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
 from Colab.Datasets.TransitionDataGrid import data_store
@@ -47,7 +47,7 @@ class GridWorldExperiment(BaseExperiment):
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes >= 1:
-            self.environment.render()
+            # self.environment.render()
             # self.environment.render(values=self.calculateValues())
             # self.environment.render(values= self.modelErrorCalculatedByAgent(self.agent.model_error))
             # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
@@ -56,6 +56,9 @@ class GridWorldExperiment(BaseExperiment):
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
             #                                                         self.environment.transitionFunctionBackward)[1])
+            train, test = data_store(self.environment)
+            self.environment.render(values=self.calculateModelErrorError(self.agent.model['backward'],
+                                                                         test)[1])
         if term:
             self.agent.end(reward)
             roat = (reward, obs, None, term)
@@ -77,7 +80,7 @@ class GridWorldExperiment(BaseExperiment):
 
         self.num_episodes += 1
         self.num_steps_to_goal_list.append(self.num_steps)
-        print("num steps: ", self.num_steps)
+        # print("num steps: ", self.num_steps)
         return is_terminal
 
     def observationChannel(self, s):
@@ -228,13 +231,49 @@ class GridWorldExperiment(BaseExperiment):
                 # assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
                 err = torch.mean((state - prev_state) ** 2)
 
-
-
             else:
                 raise ValueError('type is not defined')
             sum += err
         mse = sum / len(test_data)
         return mse
+    def calculateModelErrorError(self, model, test_data, type='backward', true_transition_function=None):
+        sum = 0.0
+        errors = {}
+        for data in test_data:
+            obs, action, next_obs, reward = data
+            if type == 'forward':
+                raise NotImplementedError
+                next_state = self.agent.getStateRepresentation(next_obs)
+                state = self.agent.getStateRepresentation(obs)
+                true_state = self.agent.getStateRepresentation(
+                    true_transition_function(obs, action, state_type='coord'))
+                pred_state = self.agent.rolloutWithModel(state, action, model)[0]
+
+                assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
+                err = torch.mean((next_state - pred_state) ** 2)
+
+            elif type == 'backward':
+                state = self.agent.getStateRepresentation(obs)
+                next_state = self.agent.getStateRepresentation(next_obs)
+                prev_state = self.agent.rolloutWithModel(next_state, action, model)
+                # assert pred_state.shape == next_obs.shape, 'pred_state and true_state have different shapes'
+                true_err = torch.mean((state - prev_state) ** 2)
+                pred_err = self.agent.calculateError(next_state, action, self.agent.error_network)
+                err = (true_err - pred_err) ** 2
+            else:
+                raise ValueError('type is not defined')
+            sum += err
+
+            pos = self.environment.stateToPos(obs)
+            if ((pos), tuple(action)) in self.visit_counts:
+                errors[(pos), tuple(action)] = round(float(err.data.cpu().numpy()), 3), \
+                                          self.visit_counts[(pos), tuple(action)]
+            else:
+                errors[(pos), tuple(action)] = round(float(err.data.cpu().numpy()), 3), \
+                                          0
+
+        mse = sum / len(test_data)
+        return mse, errors
 
     def updateVisitCounts(self, s, a):
         if a is None:
@@ -388,7 +427,7 @@ class RunExperiment():
 
             for e in range(num_episode):
 
-                print("starting episode ", e + 1)
+                # print("starting episode ", e + 1)
                 experiment.runEpisode(max_step_each_episode)
 
                 if self.model_type[i] == 'forward':
@@ -521,7 +560,6 @@ class TestExperiment(RunExperiment):
                             all_actions=env.getAllActions(),
                             obstacles_pos=env.get_obstacles_pos())
 
-
 class RunExperiment2():
     def __init__(self):
 
@@ -535,12 +573,13 @@ class RunExperiment2():
         # Assuming that we are on a CUDA machine, this should print a CUDA device:
         print(self.device)
 
-    def run_experiment(self):
+    def run_experiment(self, stepsize):
         num_runs = config.num_runs
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
         self.num_steps_run_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
         self.model_error_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.float)
+        self.agent_model_error_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.float)
         self.model_error_samples = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
 
         agent_counter = -1
@@ -567,33 +606,55 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 0.1,
+                                       'max_stepsize': stepsize,
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
                                        'model': pre_trained_model,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
-
+                if agent_counter == 0:
+                    agent.is_using_error = True
+                else:
+                    agent.is_using_error = False
                 # make an instance of the experiment for (agent, env)
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    print("starting episode ", e + 1)
+                    # print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
                         model_type = list(agent.model.keys())[0]
+                        agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
+                                                            test,
+                                                            type=str(model_type),
+                                                            true_transition_function=env.transitionFunction)[0]
+
                         model_error = experiment.calculateModelErrorWithData(agent.model[model_type],
                                                                          test,
                                                                          type=str(model_type),
                                                                          true_transition_function=env.transitionFunction)
                         self.model_error_list[agent_counter, r, e] = model_error
+                        self.agent_model_error_list[agent_counter, r, e] = agent_model_error
                         self.model_error_samples[agent_counter, r, e] = experiment.num_samples
 
+                # *********
+                # model_type = list(agent.model.keys())[0]
+                # utils.draw_grid((config._n, config._n), (900, 900),
+                #                 state_action_values=experiment.calculateModelErrorError(agent.model[model_type],
+                #                                             test,
+                #                                             type=str(model_type),
+                #                                             true_transition_function=env.transitionFunction)[1],
+                #                 all_actions=env.getAllActions(),
+                #                 obstacles_pos=env.get_obstacles_pos())
+                # *********
 
+        # self.show_model_error_plot()
+        # self.show_agent_model_error_plot()
+        print("step_size:", stepsize)
+        self.show_num_steps_plot()
 
-        self.show_model_error_plot()
-        # self.show_num_steps_plot()
 
 
 
@@ -610,6 +671,7 @@ class RunExperiment2():
             raise ValueError("model type not defined")
 
         return pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x
+
     def show_num_steps_plot(self):
         if False:
             for a in range(self.num_steps_run_list.shape[0]):
@@ -622,10 +684,15 @@ class RunExperiment2():
             for a in range(self.num_steps_run_list.shape[0]):
                 agent_name = self.agents[a].name
                 average_num_steps_run = np.mean(self.num_steps_run_list[a], axis=0)
+                std_err_num_steps_run = np.std(self.num_steps_run_list[a], axis=0)
+                AUC = sum(average_num_steps_run)
+                print("AUC:", AUC)
                 utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                        std_error = std_err_num_steps_run,
                         xlabel='episode_num', ylabel='num_steps', show=False,
-                        label=agent_name, title= 'average over runs')
+                        label=agent_name + str(a), title= 'average over runs')
             plt.show()
+
     def show_model_error_plot(self):
         for a in range(self.model_error_list.shape[0]):
             agent_name = self.agents[a].name
@@ -634,6 +701,13 @@ class RunExperiment2():
                                 xlabel='num_samples', ylabel='model_error', show=True,
                                 label=agent_name, title='run_number ' + str(r + 1))
 
+    def show_agent_model_error_plot(self):
+        for a in range(self.agent_model_error_list.shape[0]):
+            agent_name = self.agents[a].name
+            for r in range(self.agent_model_error_list.shape[1]):
+                utils.draw_plot(range(len(self.model_error_samples[a, r])), self.agent_model_error_list[a, r],
+                                xlabel='num_samples', ylabel='agent_model_error', show=True,
+                                label=agent_name, title='run_number ' + str(r + 1))
     #
     # def calculate_model_error(self):
     #     if self.model_type[i] == 'forward':

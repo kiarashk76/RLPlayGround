@@ -637,7 +637,7 @@ class BaseDynaAgent(BaseAgent):
                              layers_features=[64,32],
                              action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
                              batch_size=10,
-                             step_size=0.001/10,
+                             step_size=params['max_stepsize'] / 10,
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
@@ -699,7 +699,7 @@ class BaseDynaAgent(BaseAgent):
 
         #store the new transition in buffer
         self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     self.state, self.action, False, self.time_step))
+                                                     self.state, self.action, False, self.time_step, 0))
         #update target
         if self._target_vf['counter'] >= self._target_vf['update_rate']:
             self.setTargetValueFunction(self._vf['q'], 'q')
@@ -729,7 +729,7 @@ class BaseDynaAgent(BaseAgent):
         reward = torch.tensor(reward).unsqueeze(0).to(self.device)
 
         self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     None, None, True, self.time_step))
+                                                     None, None, True, self.time_step, 0))
 
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
@@ -817,9 +817,9 @@ class BaseDynaAgent(BaseAgent):
 # ***
     def updateValueFunction(self, transition_batch, vf_type):
         for i, data in enumerate(transition_batch):
-            prev_state, prev_action, reward, state, action, _, t = data
+            prev_state, prev_action, reward, state, action, _, t, error = data
             self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
-        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'])
+        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'] * np.exp(-error))
         self._target_vf['counter'] += 1
 
     def calculateGradientValueFunction(self, vf_type, reward, prev_state, prev_action, state=None, action=None):

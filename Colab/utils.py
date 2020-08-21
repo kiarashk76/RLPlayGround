@@ -6,11 +6,11 @@ import pygame
 import random
 from collections import namedtuple
 
-transition = namedtuple('transition', ['prev_state', 'prev_action', 'reward', 'state', 'action', 'is_terminal', 'time_step'])
+transition = namedtuple('transition', ['prev_state', 'prev_action', 'reward', 'state', 'action', 'is_terminal', 'time_step', 'error'])
 # transition = namedtuple('transition', ['prev_state', 'prev_action', 'reward', 'state', 'action'])
 
 
-def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False, label=''):
+def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, show=False, label='', std_error=None):
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     if xlim is not None:
@@ -27,7 +27,8 @@ def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, 
         plt.title(title)
 
     # plotting the points
-    plt.plot(x, y, label=label)
+    plt.errorbar(x, y, yerr=std_error, label=label)
+    # plt.plot(x, y, label=label)
     plt.legend()
     if show:
         # # function to show the plot

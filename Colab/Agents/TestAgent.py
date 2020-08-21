@@ -113,6 +113,7 @@ import random
 
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 import Colab.Networks.ModelNN.StateTransitionModel as STModel
+from Colab.Networks.ModelNN.ModelError import ModelError
 import Colab.utils as utils
 
 
@@ -134,11 +135,21 @@ class BackwardDynaAgent(BaseDynaAgent):
                                        training=True,
                                        halluc_steps=2,
                                        plan_steps=2,
-                                       plan_number=1,
+                                       plan_number=3,
                                        plan_horizon=1,
-                                       plan_buffer_size=1,
+                                       plan_buffer_size=10,
                                        plan_buffer=[])}
         self.true_model = params['true_bw_model']
+        self.error_network = dict(network=params['model'],
+                                       step_size=0.01,
+                                       layers_type=['fc'],
+                                       layers_features=[32],
+                                       action_layer_number=2,
+                                       batch_size=4,
+                                       batch_counter=None,
+                                       training=True,
+                                       halluc_steps=2)
+
         self.planning_transition_buffer = []
         self.planning_transition_buffer_size = 10
 
@@ -154,16 +165,29 @@ class BackwardDynaAgent(BaseDynaAgent):
                 self.model['backward']['layers_features'],
                 self.model['backward']['action_layer_number'])
         self.model['backward']['network'].to(self.device)
-        self.model['backward']['batch_counter'] = 0
+
+        if self.error_network['network'] is not None:
+            return
+        self.error_network['network'] = \
+            ModelError(
+                state.shape,
+                len(self.action_list),
+                self.error_network['layers_type'],
+                self.error_network['layers_features'],
+                self.error_network['action_layer_number'])
+        self.error_network['network'].to(self.device)
+
 
     def trainModel(self, terminal=False):
-        if len(self.transition_buffer) < self._vf['q']['batch_size']:
+        if len(self.transition_buffer) < self.model['backward']['batch_size']:
             return
         transition_batch = self.getTransitionFromBuffer(n=self.model['backward']['batch_size'])
         for i, data in enumerate(transition_batch):
-            prev_state, prev_action, reward, state, action, terminal, t = data
+            prev_state, prev_action, reward, state, action, terminal, t, _ = data
             if self.model['backward']['training'] is True:
                 self._calculateGradients(self.model['backward'], prev_state, prev_action, state, terminal=terminal)
+            if self.error_network['training']:
+                self._calculateErrorGradients(self.error_network, prev_state, prev_action, state)
         step_size = self.model['backward']['step_size'] / len(transition_batch)
         self.updateNetworkWeights(self.model['backward']['network'], step_size)
 
@@ -186,8 +210,12 @@ class BackwardDynaAgent(BaseDynaAgent):
                     reward = torch.tensor(reward).unsqueeze(0).to(self.device)
                     x_old = prev_state.float().to(self.device)
                     x_new = state.float().to(self.device) if not terminal else None
+
+                    error = 0
+                    if self.is_using_error :
+                        error = self.calculateTrueError(state, prev_action)
                     self.update_planning_transition_buffer(utils.transition(x_old, prev_action, reward,
-                                                         x_new, action, terminal, self.time_step))
+                                                         x_new, action, terminal, self.time_step, error))
                     action = prev_action
                     state = prev_state
 
@@ -206,6 +234,28 @@ class BackwardDynaAgent(BaseDynaAgent):
                 current_state = prev_state
         return prev_state
 
+    def calculateError(self, state, action, error_network):
+        with torch.no_grad():
+            action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
+            action_index = self.getActionIndex(action)
+            if len(error_network['layers_type']) + 1 == error_network['action_layer_number']:
+                error = error_network['network'](state, action_onehot)[:, action_index]
+            else:
+                error = error_network['network'](state, action_onehot)
+
+        return error
+
+    def calculateTrueError(self, state, action, h=1):
+        pred_prev_state = self.rolloutWithModel(state, action, self.model['backward'], h=h)
+        state = state.cpu().numpy()[0]
+        for i in range(h):
+            prev_state = self.true_model(state, action)
+            state = prev_state
+            action = self.backwardRolloutPolicy(state)
+        true_prev_state = torch.from_numpy(prev_state).unsqueeze(0)
+        error = torch.mean((true_prev_state - pred_prev_state) ** 2)
+        return error
+
     def backwardRolloutPolicy(self, state):
         # with torch.no_grad:
         random_action = self.action_list[int(np.random.rand() * self.num_actions)]
@@ -215,8 +265,8 @@ class BackwardDynaAgent(BaseDynaAgent):
         # todo: add hallucination training
         if next_state is None:
             return
-        state = state.float().unsqueeze(0)
-        next_state = next_state.float().unsqueeze(0)
+        state = state.float()
+        next_state = next_state.float()
         action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
         action_index = self.getActionIndex(action)
 
@@ -226,6 +276,24 @@ class BackwardDynaAgent(BaseDynaAgent):
             input = model['network'](next_state, action_onehot)[0]
         target = state
 
+        assert target.shape == input.shape, 'target and input must have same shapes'
+        loss = nn.MSELoss()(input, target)
+        loss.backward()
+
+    def _calculateErrorGradients(self, error_network, state, action, next_state):
+        if next_state is None:
+            return
+        state = state.float()
+        next_state = next_state.float()
+        action_onehot = torch.from_numpy(self.getActionOnehot(action)).unsqueeze(0).to(self.device)
+        action_index = self.getActionIndex(action)
+
+        if len(error_network['layers_type']) + 1 == error_network['action_layer_number']:
+            input = error_network['network'](next_state, action_onehot)[:, action_index]
+        else:
+            input = error_network['network'](next_state, action_onehot)
+        pred_state = self.rolloutWithModel(next_state, action, self.model['backward'])
+        target = torch.mean((state - pred_state) ** 2).unsqueeze(0).unsqueeze(0)
         assert target.shape == input.shape, 'target and input must have same shapes'
         loss = nn.MSELoss()(input, target)
         loss.backward()
@@ -260,3 +328,6 @@ class BackwardDynaAgent(BaseDynaAgent):
 
     def removeFromPlanningTransitionBuffer(self):
         self.planning_transition_buffer.pop(0)
+
+
+

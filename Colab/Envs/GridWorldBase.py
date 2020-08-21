@@ -328,7 +328,8 @@ class GridWorld():
                 possible_prev_states.append(self.posToState(pos, state_type))
 
             # reverse the action
-            prev_pos = tuple(np.subtract(pos, prev_action))
+            # prev_pos = tuple(np.subtract(pos, prev_action)) # stochastic backward
+            prev_pos = tuple((pos[i] - prev_action[i]) % self._grid_shape[i] for i, x in enumerate(zip(pos, prev_action))) #deterministic backward
             if self.checkPosInsideGrid(prev_pos) and prev_pos not in self._obstacles_pos:
                 possible_prev_states.append(self.posToState(prev_pos, state_type))
             expected_prev_state = 0

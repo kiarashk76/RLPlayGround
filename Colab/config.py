@@ -1,16 +1,16 @@
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
-from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
-
+# from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+from Colab.Agents.TestAgent import BackwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
-num_runs = 3
-num_episode = 20
-max_step_each_episode = 10
+num_runs = 10
+num_episode = 100
+max_step_each_episode = 50
 
-agent_list = [ ForwardDynaAgent, BackwardDynaAgent]
+agent_list = [BackwardDynaAgent, BackwardDynaAgent]
 pre_trained = [None, None, None]#, 'forward', 'backward',]
 
 show_pre_trained_error_grid=[False, False],
