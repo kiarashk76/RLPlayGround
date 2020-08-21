@@ -621,7 +621,7 @@ class RunExperiment2():
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    # print("starting episode ", e + 1)
+                    print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
