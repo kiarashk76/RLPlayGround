@@ -591,7 +591,7 @@ class RunExperiment2():
 
 
             for r in range(num_runs):
-                print("starting runtime ", r+1)
+                # print("starting runtime ", r+1)
                 env = GridWorld(params=config.empty_room_params)
                 train, test = data_store(env)
                 reward_function = env.rewardFunction
