@@ -606,7 +606,7 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 0.1,
-                                       'max_stepsize': stepsize,
+                                       'max_stepsize': stepsize[agent_counter],
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
@@ -691,6 +691,7 @@ class RunExperiment2():
                         std_error = std_err_num_steps_run,
                         xlabel='episode_num', ylabel='num_steps', show=False,
                         label=agent_name + str(a), title= 'average over runs')
+            plt.savefig()
             plt.show()
 
     def show_model_error_plot(self):
