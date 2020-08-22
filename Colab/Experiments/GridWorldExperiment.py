@@ -691,7 +691,7 @@ class RunExperiment2():
                         std_error = std_err_num_steps_run,
                         xlabel='episode_num', ylabel='num_steps', show=False,
                         label=agent_name + str(a), title= 'average over runs')
-            plt.savefig()
+            plt.savefig('')
             plt.show()
 
     def show_model_error_plot(self):
