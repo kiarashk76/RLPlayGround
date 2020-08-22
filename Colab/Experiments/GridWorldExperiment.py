@@ -11,10 +11,10 @@ from Colab.Envs.GridWorldBase import GridWorld
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 # from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as ForwardDynaAgent
 
-from Colab.Agents.BaseDynaAgent import BaseDynaAgent
-from Colab.Agents.RandomDynaAgent import RandomDynaAgent
-from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
-from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+# from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+# from Colab.Agents.RandomDynaAgent import RandomDynaAgent
+# from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
+# from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
 # from Colab.Agents.TestAgent import TestAgent
 
 from Colab.Networks.ModelNN.StateTransitionModel import preTrainBackward, preTrainForward
@@ -218,7 +218,7 @@ class GridWorldExperiment(BaseExperiment):
                 next_state = self.agent.getStateRepresentation(next_obs)
                 state = self.agent.getStateRepresentation(obs)
                 true_state = self.agent.getStateRepresentation(true_transition_function(obs, action, state_type='coord'))
-                pred_state = self.agent.rolloutWithModel(state, action, model)[0]
+                pred_state = self.agent.rolloutWithModel(state, action, model)
 
                 assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
                 err = torch.mean((next_state - pred_state) ** 2)
@@ -573,7 +573,7 @@ class RunExperiment2():
         # Assuming that we are on a CUDA machine, this should print a CUDA device:
         print(self.device)
 
-    def run_experiment(self, stepsize):
+    def run_experiment(self, vf_stepsize, model_stepsize):
         num_runs = config.num_runs
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
@@ -606,11 +606,12 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 0.1,
-                                       'max_stepsize': stepsize[agent_counter],
+                                       'max_stepsize': vf_stepsize,
+                                       'model_stepsize': model_stepsize,
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
-                                       'model': pre_trained_model,
+                                       'model': pre_trained_model, #None,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
                 if agent_counter == 0:
@@ -626,17 +627,17 @@ class RunExperiment2():
                     self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
                         model_type = list(agent.model.keys())[0]
-                        agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
-                                                            test,
-                                                            type=str(model_type),
-                                                            true_transition_function=env.transitionFunction)[0]
+                        # agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
+                        #                                     test,
+                        #                                     type=str(model_type),
+                        #                                     true_transition_function=env.transitionFunction)[0]
 
                         model_error = experiment.calculateModelErrorWithData(agent.model[model_type],
                                                                          test,
                                                                          type=str(model_type),
                                                                          true_transition_function=env.transitionFunction)
                         self.model_error_list[agent_counter, r, e] = model_error
-                        self.agent_model_error_list[agent_counter, r, e] = agent_model_error
+                        # self.agent_model_error_list[agent_counter, r, e] = agent_model_error
                         self.model_error_samples[agent_counter, r, e] = experiment.num_samples
 
                 # *********
@@ -652,7 +653,8 @@ class RunExperiment2():
 
         # self.show_model_error_plot()
         # self.show_agent_model_error_plot()
-        print("step_size:", stepsize)
+        print("vf step_size:", vf_stepsize)
+        print("md step_size:", model_stepsize)
         self.show_num_steps_plot()
 
 
@@ -680,19 +682,37 @@ class RunExperiment2():
                     utils.draw_plot(range(len(self.num_steps_run_list[a,r])), self.num_steps_run_list[a,r],
                             xlabel='episode_num', ylabel='num_steps', show=True,
                             label=agent_name, title='run_number '+str(r+1))
+        if False:
+            for r in range(self.num_steps_run_list.shape[1]):
+                for a in range(self.num_steps_run_list.shape[0]):
+                    agent_name = self.agents[a].name
+                    utils.draw_plot(range(len(self.num_steps_run_list[a,r])), self.num_steps_run_list[a,r],
+                            xlabel='episode_num', ylabel='num_steps', show=False,
+                            label=agent_name, title='run_number '+str(r+1))
+                plt.show()
+
         if True:
+            color=['blue','orange']
             for a in range(self.num_steps_run_list.shape[0]):
                 agent_name = self.agents[a].name
                 average_num_steps_run = np.mean(self.num_steps_run_list[a], axis=0)
                 std_err_num_steps_run = np.std(self.num_steps_run_list[a], axis=0)
                 AUC = sum(average_num_steps_run)
-                print("AUC:", AUC)
-                utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
-                        std_error = std_err_num_steps_run,
-                        xlabel='episode_num', ylabel='num_steps', show=False,
-                        label=agent_name + str(a), title= 'average over runs')
-            plt.savefig('')
-            plt.show()
+                print("AUC:", AUC, agent_name)
+                # utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                #         std_error = std_err_num_steps_run,
+                #         xlabel='episode_num', ylabel='num_steps', show=False,
+                #         label=agent_name + str(a), title= 'average over runs',
+                #         sub_plot_num='3'+'1' + str(a+1), color=color[a])
+                #
+                # utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                #                 std_error=std_err_num_steps_run,
+                #                 xlabel='episode_num', ylabel='num_steps', show=False,
+                #                 label=agent_name + str(a), title='average over runs',
+                #                 sub_plot_num=313)
+
+            # plt.savefig('')
+            # plt.show()
 
     def show_model_error_plot(self):
         for a in range(self.model_error_list.shape[0]):

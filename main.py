@@ -3,17 +3,18 @@ if __name__ == '__main__':
     # experiment = RunExperiment()
     # experiment.run_experiment()
 
-    stepsize = [2 ** -8, 2 ** -5]
-    experiment = RunExperiment2()
-    experiment.run_experiment(stepsize)
+    # stepsize = [2 ** -8, 2 ** -5]
+    # experiment = RunExperiment2()
+    # experiment.run_experiment(stepsize)
 
-    parameter_sweep = False
+    parameter_sweep = True
     if parameter_sweep:
-        stepsize = [2 ** -i for i in range(10)]
-        for counter, a in enumerate(stepsize):
-            print(counter, "step size")
-            experiment = RunExperiment2()
-            experiment.run_experiment(a)
+        vf_stepsize = [2 ** -i for i in range(10)]
+        model_stepsize = [2 ** -i for i in range(10)]
+        for c1, s_vf in enumerate(vf_stepsize):
+            for c2, s_md in enumerate(model_stepsize):
+                experiment = RunExperiment2()
+                experiment.run_experiment(s_vf, s_md)
 
 '''
 step_size: 1
