@@ -611,7 +611,7 @@ class RunExperiment2():
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
-                                       'model': pre_trained_model, #None,
+                                       'model': pre_trained_model,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
                 if agent_counter == 2:
