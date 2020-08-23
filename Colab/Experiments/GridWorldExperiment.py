@@ -614,7 +614,7 @@ class RunExperiment2():
                                        'model': pre_trained_model, #None,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
-                if agent_counter == 0:
+                if agent_counter == 2:
                     agent.is_using_error = True
                 else:
                     agent.is_using_error = False
