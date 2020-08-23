@@ -10,8 +10,8 @@ if __name__ == '__main__':
     parameter_sweep = True
     if parameter_sweep:
         # vf_stepsize = [2 ** -(i+3) for i in range(8)]
-        vf_stepsize = [2 ** -10]
-        model_stepsize = [2 ** -(i+3) for i in range(8)]
+        vf_stepsize = [2 ** -9, 2**-10]
+        # model_stepsize = [2 ** -(i+3) for i in range(8)]
         for c1, s_vf in enumerate(vf_stepsize):
             for c2, s_md in enumerate(model_stepsize):
                 experiment = RunExperiment2()
