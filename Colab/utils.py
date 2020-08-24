@@ -30,7 +30,6 @@ def draw_plot(x, y, xlim=None, ylim=None, xlabel=None, ylabel=None, title=None, 
     if std_error is None:
         plt.plot(x, y, label=label)
     else:
-        plt.subplot(sub_plot_num)
         if color is not None:
             plt.errorbar(x, y, yerr=std_error, label=label, color=color)
         else:

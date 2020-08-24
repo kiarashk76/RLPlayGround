@@ -606,8 +606,8 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 0.1,
-                                       'max_stepsize': vf_stepsize,
-                                       'model_stepsize': model_stepsize,
+                                       'max_stepsize': vf_stepsize[agent_counter],
+                                       'model_stepsize': model_stepsize[agent_counter],
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
@@ -655,6 +655,8 @@ class RunExperiment2():
         # self.show_agent_model_error_plot()
         print("vf step_size:", vf_stepsize)
         print("md step_size:", model_stepsize)
+        with open('num_steps_run_list.npy', 'wb') as f:
+            np.save(f, self.num_steps_run_list)
         self.show_num_steps_plot()
 
 
@@ -682,7 +684,7 @@ class RunExperiment2():
                     utils.draw_plot(range(len(self.num_steps_run_list[a,r])), self.num_steps_run_list[a,r],
                             xlabel='episode_num', ylabel='num_steps', show=True,
                             label=agent_name, title='run_number '+str(r+1))
-        if False:
+        if True:
             for r in range(self.num_steps_run_list.shape[1]):
                 for a in range(self.num_steps_run_list.shape[0]):
                     agent_name = self.agents[a].name
@@ -692,27 +694,27 @@ class RunExperiment2():
                 plt.show()
 
         if True:
-            color=['blue','orange']
+            color=['blue','orange','green']
             for a in range(self.num_steps_run_list.shape[0]):
                 agent_name = self.agents[a].name
                 average_num_steps_run = np.mean(self.num_steps_run_list[a], axis=0)
                 std_err_num_steps_run = np.std(self.num_steps_run_list[a], axis=0)
                 AUC = sum(average_num_steps_run)
                 print("AUC:", AUC, agent_name)
-                # utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
-                #         std_error = std_err_num_steps_run,
-                #         xlabel='episode_num', ylabel='num_steps', show=False,
-                #         label=agent_name + str(a), title= 'average over runs',
-                #         sub_plot_num='3'+'1' + str(a+1), color=color[a])
-                #
-                # utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
-                #                 std_error=std_err_num_steps_run,
-                #                 xlabel='episode_num', ylabel='num_steps', show=False,
-                #                 label=agent_name + str(a), title='average over runs',
-                #                 sub_plot_num=313)
+                utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                        std_error = std_err_num_steps_run,
+                        xlabel='episode_num', ylabel='num_steps', show=False,
+                        label=agent_name + str(a), title= 'average over runs',
+                        sub_plot_num='4'+'1' + str(a+1), color=color[a])
+
+                utils.draw_plot(range(len(average_num_steps_run)), average_num_steps_run,
+                                std_error=std_err_num_steps_run,
+                                xlabel='episode_num', ylabel='num_steps', show=False,
+                                label=agent_name + str(a), title='average over runs',
+                                sub_plot_num=414)
 
             # plt.savefig('')
-            # plt.show()
+            plt.show()
 
     def show_model_error_plot(self):
         for a in range(self.model_error_list.shape[0]):
