@@ -46,8 +46,8 @@ class GridWorldExperiment(BaseExperiment):
         self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
-        if self._render_on and self.num_episodes >= 1:
-            # self.environment.render()
+        if self._render_on and self.num_episodes >= 0:
+            self.environment.render()
             # self.environment.render(values=self.calculateValues())
             # self.environment.render(values= self.modelErrorCalculatedByAgent(self.agent.model_error))
             # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
@@ -56,9 +56,10 @@ class GridWorldExperiment(BaseExperiment):
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values=self.calculateModelError(self.agent.model['backward'],
             #                                                         self.environment.transitionFunctionBackward)[1])
-            train, test = data_store(self.environment)
-            self.environment.render(values=self.calculateModelErrorError(self.agent.model['backward'],
-                                                                         test)[1])
+
+            # train, test = data_store(self.environment)
+            # self.environment.render(values=self.calculateModelErrorError(self.agent.model['backward'],
+            #                                                              test)[1])
         if term:
             self.agent.end(reward)
             roat = (reward, obs, None, term)
@@ -74,13 +75,19 @@ class GridWorldExperiment(BaseExperiment):
         is_terminal = False
         self.start()
 
-        while (not is_terminal) and ((max_steps == 0) or (self.num_steps < max_steps)):
+        # while (not is_terminal) and ((max_steps == 0) or (self.num_steps < max_steps)):
+        #     rl_step_result = self.step()
+        #     is_terminal = rl_step_result[3]
+
+        while ((max_steps == 0) or (self.num_steps < max_steps)):
             rl_step_result = self.step()
             is_terminal = rl_step_result[3]
+            if is_terminal:
+                self.start()
 
         self.num_episodes += 1
         self.num_steps_to_goal_list.append(self.num_steps)
-        # print("num steps: ", self.num_steps)
+        print("num steps: ", self.num_steps)
         return is_terminal
 
     def observationChannel(self, s):
@@ -218,10 +225,14 @@ class GridWorldExperiment(BaseExperiment):
                 next_state = self.agent.getStateRepresentation(next_obs)
                 state = self.agent.getStateRepresentation(obs)
                 true_state = self.agent.getStateRepresentation(true_transition_function(obs, action, state_type='coord'))
-                pred_state = self.agent.rolloutWithModel(state, action, model)
 
-                assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
-                err = torch.mean((next_state - pred_state) ** 2)
+                err = np.inf
+                for i in range(self.agent.model[type]['num_networks']):
+                    pred_state = self.agent.rolloutWithModel(state, action, model, net_index=i)
+                    assert pred_state.shape == next_state.shape, 'pred_state and true_state have different shapes'
+                    temp_err = torch.mean((next_state - pred_state) ** 2)
+                    if temp_err < err:
+                        err = temp_err
 
             elif type == 'backward':
                 state = self.agent.getStateRepresentation(obs)
@@ -527,39 +538,6 @@ class RunExperiment():
                           show=False, title=self.model_type, label=self.model_type[i])
         plt.show()
 
-class TestExperiment(RunExperiment):
-
-    def run_experiment(self):
-        num_runs = config.num_runs
-        num_episode = config.num_episode
-        max_step_each_episode = config.max_step_each_episode
-        for r in range(num_runs):
-            env = GridWorldRooms(params=config.n_room_params)
-            reward_function = env.rewardFunction
-            goal = np.asarray(env.posToState((0, config._n - 1), state_type='coord'))
-            agent = TestAgent( {'action_list': np.asarray(env.getAllActions()),
-                                      'gamma': 1.0, 'epsilon': 0.1,
-                                      'reward_function': reward_function,
-                                      'goal': goal,
-                                      'device': self.device,
-                                      'model': None,
-                                      'true_model': env.fullTransitionFunction})
-            experiment = GridWorldExperiment(agent, env, self.device)
-            for e in range(num_episode):
-                print("starting episode ", e + 1)
-                experiment.runEpisode(max_step_each_episode)
-
-            utils.draw_grid((config._n, config._n), (900, 900),
-                            state_action_values=experiment.calculateModelError(agent.model['forward'],
-                                                                               env.transitionFunction)[1],
-                            all_actions=env.getAllActions(),
-                            obstacles_pos=env.get_obstacles_pos())
-
-            utils.draw_grid((config._n, config._n), (900, 900),
-                            state_action_values=experiment.modelErrorCalculatedByAgent(agent.model_error),
-                            all_actions=env.getAllActions(),
-                            obstacles_pos=env.get_obstacles_pos())
-
 class RunExperiment2():
     def __init__(self):
 
@@ -592,7 +570,9 @@ class RunExperiment2():
 
             for r in range(num_runs):
                 print("starting runtime ", r+1)
-                env = GridWorld(params=config.empty_room_params)
+                # env = GridWorld(params=config.empty_room_params)
+                env = GridWorldRooms(params=config.n_room_params)
+
                 train, test = data_store(env)
                 reward_function = env.rewardFunction
                 goal = np.asarray(env.posToState((0, config._n - 1), state_type='coord'))
@@ -605,7 +585,7 @@ class RunExperiment2():
 
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
-                                       'gamma': 1.0, 'epsilon': 0.1,
+                                       'gamma': 1.0, 'epsilon': 1.0,
                                        'max_stepsize': vf_stepsize[agent_counter],
                                        'model_stepsize': model_stepsize[agent_counter],
                                        'reward_function': reward_function,
@@ -614,16 +594,24 @@ class RunExperiment2():
                                        'model': pre_trained_model,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
-                if agent_counter == 2:
-                    agent.is_using_error = True
-                else:
-                    agent.is_using_error = False
+                if agent_counter == 0:
+                    # agent.is_using_error = True
+                    agent.model['forward']['num_networks'] = 4
+                    agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [8]
+                elif agent_counter == 1:
+                    # agent.is_using_error = False
+                    agent.model['forward']['num_networks'] = 1
+                    agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [32]
+
                 # make an instance of the experiment for (agent, env)
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    # print("starting episode ", e + 1)
+                    print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
+
                     self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
                         model_type = list(agent.model.keys())[0]
@@ -651,16 +639,54 @@ class RunExperiment2():
                 #                 obstacles_pos=env.get_obstacles_pos())
                 # *********
 
-        # self.show_model_error_plot()
+            # self.calculate_model_error(agent, env)
+
+        self.show_model_error_plot()
         # self.show_agent_model_error_plot()
         print("vf step_size:", vf_stepsize)
         print("md step_size:", model_stepsize)
-        with open('num_steps_run_list.npy', 'wb') as f:
-            np.save(f, self.num_steps_run_list)
+        # with open('num_steps_run_list.npy', 'wb') as f:
+        #     np.save(f, self.num_steps_run_list)
+        with open('model_error_run3.npy', 'wb') as f:
+            np.save(f, self.model_error_list)
+            np.save(f, self.model_error_samples)
         self.show_num_steps_plot()
 
 
+    def calculate_model_error(self, agent, env):
+        error = {}
+        for s in env.getAllStates(state_type='coord'):
+            state = agent.getStateRepresentation(s)
+            for a in env.getAllActions():
+                # true_next_state = env.transitionFunctionBackward(s, a)
+                true_next_state = env.transitionFunction(s, a)
 
+                distance_pred = []
+                for i in range(agent.model['forward']['num_networks']):
+                    distance_pred.append(torch.dist(agent.rolloutWithModel(state, a, agent.model['forward'], net_index=i),
+                                                    torch.from_numpy(true_next_state).float()))
+                # print(distance_pred)
+                pos = env.stateToPos(s, state_type='coord')
+                model_index = distance_pred.index(min(distance_pred))
+                if ((pos),tuple(a)) not in error:
+                    # error[(pos), tuple(a)] = round(distance_pred[0].item(),3), round(distance_pred[1].item(),3), round(distance_pred[2].item(),3)
+                    # error[(pos), tuple(a)] = str(model_index), round(distance_pred[model_index].item(), 3)
+                    try:
+                        error[(pos), tuple(a)] = str(round(distance_pred[model_index].item(), 3)) + "\n" + \
+                                                 str(agent.counter[(pos), tuple(a)])
+
+                        # error[(pos), tuple(a)] = str(model_index) + "\n" + \
+                        #                          str(agent.counter[(pos), tuple(a)])
+                    except:
+                        error[(pos), tuple(a)] = str(round(distance_pred[model_index].item(), 3)) + "\n" + \
+                                                 str(0)
+                        # error[(pos), tuple(a)] = str(model_index) + "\n" + \
+                        #                          str((0, 0, 0))
+
+        utils.draw_grid((env.grid_size[0], env.grid_size[1]), (900, 900),
+                        state_action_values=error,
+                        all_actions=env.getAllActions(),
+                        obstacles_pos=env.get_obstacles_pos())
 
     def pretrain_model(self, model_type, env):
         if model_type == 'forward':
@@ -684,7 +710,7 @@ class RunExperiment2():
                     utils.draw_plot(range(len(self.num_steps_run_list[a,r])), self.num_steps_run_list[a,r],
                             xlabel='episode_num', ylabel='num_steps', show=True,
                             label=agent_name, title='run_number '+str(r+1))
-        if True:
+        if False:
             for r in range(self.num_steps_run_list.shape[1]):
                 for a in range(self.num_steps_run_list.shape[0]):
                     agent_name = self.agents[a].name
@@ -693,7 +719,7 @@ class RunExperiment2():
                             label=agent_name, title='run_number '+str(r+1))
                 plt.show()
 
-        if True:
+        if False:
             color=['blue','orange','green']
             for a in range(self.num_steps_run_list.shape[0]):
                 agent_name = self.agents[a].name
@@ -717,12 +743,45 @@ class RunExperiment2():
             plt.show()
 
     def show_model_error_plot(self):
-        for a in range(self.model_error_list.shape[0]):
-            agent_name = self.agents[a].name
+
+        if False:
+            for a in range(self.model_error_list.shape[0]):
+                agent_name = self.agents[a].name
+                for r in range(self.model_error_list.shape[1]):
+                    utils.draw_plot(range(len(self.model_error_samples[a,r])), self.model_error_list[a,r],
+                            xlabel='num_samples', ylabel='model_error', show=True,
+                            label=agent_name, title='run_number '+str(r+1))
+        if False:
             for r in range(self.model_error_list.shape[1]):
-                utils.draw_plot(range(len(self.model_error_samples[a, r])), self.model_error_list[a, r],
-                                xlabel='num_samples', ylabel='model_error', show=True,
-                                label=agent_name, title='run_number ' + str(r + 1))
+                for a in range(self.model_error_list.shape[0]):
+                    agent_name = self.agents[a].name
+                    utils.draw_plot(range(len(self.model_error_list[a,r])), self.model_error_list[a,r],
+                            xlabel='num_samples', ylabel='model_error', show=False,
+                            label=agent_name, title='run_number '+str(r+1))
+                plt.show()
+
+        if False:
+            color=['blue','orange','green']
+            for a in range(self.model_error_list.shape[0]):
+                agent_name = self.agents[a].name
+                average_model_error_run = np.mean(self.model_error_list[a], axis=0)
+                std_err_model_error_run = np.std(self.model_error_list[a], axis=0)
+                AUC = sum(average_model_error_run)
+                print("AUC:", AUC, agent_name)
+                utils.draw_plot(range(len(average_model_error_run)), average_model_error_run,
+                        std_error = std_err_model_error_run,
+                        xlabel='num_samples', ylabel='model_error', show=False,
+                        label=agent_name + str(a), title= 'average over runs',
+                        sub_plot_num='4'+'1' + str(a+1), color=color[a])
+
+                utils.draw_plot(range(len(average_model_error_run)), average_model_error_run,
+                                std_error=std_err_model_error_run,
+                                xlabel='num_samples', ylabel='model_error', show=False,
+                                label=agent_name + str(a), title='average over runs',
+                                sub_plot_num=414)
+
+            # plt.savefig('')
+            plt.show()
 
     def show_agent_model_error_plot(self):
         for a in range(self.agent_model_error_list.shape[0]):

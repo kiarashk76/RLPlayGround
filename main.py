@@ -1,10 +1,12 @@
-from Colab.Experiments.GridWorldExperiment import RunExperiment2, TestExperiment
+from Colab.Experiments.GridWorldExperiment import RunExperiment2
 if __name__ == '__main__':
     # experiment = RunExperiment()
     # experiment.run_experiment()
 
-    s_vf = [2 ** -6, 2 ** -5, 2 ** -7]
-    s_md = [2 ** -5, 2 ** -10, 2 ** -9]
+    # s_vf = [2 ** -6, 2 ** -5, 2 ** -7]
+    # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
+    s_vf = [2 ** -6, 2 ** -6]
+    s_md = [2 ** -5, 2 ** -5]
     experiment = RunExperiment2()
     experiment.run_experiment(s_vf, s_md)
 

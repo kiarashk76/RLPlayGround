@@ -223,8 +223,8 @@ class GridWorld():
             # choose a random action
             action = self.getAllActions()[random.randint(0, len(self.getAllActions()) - 1)]
 
-        # next_pos = tuple(sum(x) for x in zip(pos, action)) #stochastic backward
-        next_pos = tuple(sum(x) % self._grid_shape[i] for i,x in enumerate(zip(pos, action))) #deterministic backward
+        next_pos = tuple(sum(x) for x in zip(pos, action)) #stochastic backward
+        # next_pos = tuple(sum(x) % self._grid_shape[i] for i,x in enumerate(zip(pos, action))) #deterministic backward
         if self.checkPosInsideGrid(next_pos) and next_pos not in self._obstacles_pos:
             return next_pos
         return pos
@@ -302,9 +302,9 @@ class GridWorld():
                 possible_prev_states.append(self.posToState(pos, state_type))
 
             # reverse the action
-            prev_pos = tuple(np.subtract(pos, prev_action))
+            prev_pos = tuple(np.subtract(pos, prev_action)) #stochastic backward
             
-            prev_pos = np.remainder(prev_pos, [self._grid_shape[0], self._grid_shape[1]]) #deterministic backward
+            # prev_pos = np.remainder(prev_pos, [self._grid_shape[0], self._grid_shape[1]]) #deterministic backward
             
             if self.checkPosInsideGrid(prev_pos) and prev_pos not in self._obstacles_pos:
                 possible_prev_states.append(self.posToState(prev_pos, state_type))

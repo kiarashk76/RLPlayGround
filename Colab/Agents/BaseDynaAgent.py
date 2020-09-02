@@ -658,7 +658,7 @@ class BaseDynaAgent(BaseAgent):
                               counter=0,
                               layers_num=None,
                               action_layer_num=None,
-                              update_rate=1,
+                              update_rate=10,
                               type=None)
 
         self.reward_function = params['reward_function']
