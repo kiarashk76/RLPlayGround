@@ -586,8 +586,8 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 1.0,
-                                       'max_stepsize': vf_stepsize[agent_counter],
-                                       'model_stepsize': model_stepsize[agent_counter],
+                                       'max_stepsize': vf_stepsize,#[agent_counter]
+                                       'model_stepsize': model_stepsize,#[agent_counter]
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
@@ -596,14 +596,29 @@ class RunExperiment2():
                                        'true_fw_model': env.fullTransitionFunction})
                 if agent_counter == 0:
                     # agent.is_using_error = True
-                    agent.model['forward']['num_networks'] = 4
-                    agent.model['forward']['layers_type'] = ['fc']
-                    agent.model['forward']['layers_features'] = [8]
-                elif agent_counter == 1:
-                    # agent.is_using_error = False
                     agent.model['forward']['num_networks'] = 1
                     agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [128]
+                elif agent_counter == 1:
+                    # agent.is_using_error = False
+                    agent.model['forward']['num_networks'] = 2
+                    agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [64]
+                elif agent_counter == 2:
+                    # agent.is_using_error = False
+                    agent.model['forward']['num_networks'] = 4
+                    agent.model['forward']['layers_type'] = ['fc']
                     agent.model['forward']['layers_features'] = [32]
+                elif agent_counter == 3:
+                    # agent.is_using_error = False
+                    agent.model['forward']['num_networks'] = 8
+                    agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [16]
+                elif agent_counter == 4:
+                    # agent.is_using_error = False
+                    agent.model['forward']['num_networks'] = 16
+                    agent.model['forward']['layers_type'] = ['fc']
+                    agent.model['forward']['layers_features'] = [8]
 
                 # make an instance of the experiment for (agent, env)
                 experiment = GridWorldExperiment(agent, env, self.device)
@@ -647,7 +662,7 @@ class RunExperiment2():
         print("md step_size:", model_stepsize)
         # with open('num_steps_run_list.npy', 'wb') as f:
         #     np.save(f, self.num_steps_run_list)
-        with open('model_error_run3.npy', 'wb') as f:
+        with open('model_error'+str(model_stepsize)+'.npy', 'wb') as f:
             np.save(f, self.model_error_list)
             np.save(f, self.model_error_samples)
         self.show_num_steps_plot()

@@ -6,12 +6,12 @@ from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
-num_runs = 20
+num_runs = 10
 num_episode = 200
 max_step_each_episode = 50
 
 # agent_list = [ForwardDynaAgent, BackwardDynaAgent, BackwardDynaAgent]
-agent_list = [ForwardDynaAgent, ForwardDynaAgent]
+agent_list = [ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent]
 pre_trained = [None, None, None]#, 'forward', 'backward',]
 
 show_pre_trained_error_grid=[False, False],
