@@ -13,6 +13,7 @@ from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionV
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
 
+
 class BaseMCTSAgent(BaseAgent):
     name = 'BaseDynaAgent'
 
@@ -36,33 +37,34 @@ class BaseMCTSAgent(BaseAgent):
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
         self._vf = {'q': dict(network=None,
-                             layers_type=['fc','fc'],
-                             layers_features=[64,32],
-                             action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
-                             batch_size=10,
-                             step_size=params['max_stepsize'] / 10,
-                             training=True),
-                   's': dict(network=None,
-                             layers_type=['fc'],
-                             layers_features=[32],
-                             batch_size=1,
-                             step_size=0.01,
-                             training=False)}
+                              layers_type=['fc', 'fc'],
+                              layers_features=[64, 32],
+                              action_layer_num=3,
+                              # if one more than layer numbers => we will have num of actions output
+                              batch_size=10,
+                              step_size=params['max_stepsize'] / 10,
+                              training=True),
+                    's': dict(network=None,
+                              layers_type=['fc'],
+                              layers_features=[32],
+                              batch_size=1,
+                              step_size=0.01,
+                              training=False)}
 
         self._sr = dict(network=None,
-                       layers_type=[],
-                       layers_features=[],
-                       batch_size=None,
-                       step_size=None,
-                       batch_counter=None,
-                       training=False)
+                        layers_type=[],
+                        layers_features=[],
+                        batch_size=None,
+                        step_size=None,
+                        batch_counter=None,
+                        training=False)
 
         self._target_vf = dict(network=None,
-                              counter=0,
-                              layers_num=None,
-                              action_layer_num=None,
-                              update_rate=1,
-                              type=None)
+                               counter=0,
+                               layers_num=None,
+                               action_layer_num=None,
+                               update_rate=1,
+                               type=None)
 
         self.reward_function = params['reward_function']
         self.device = params['device']
@@ -99,16 +101,16 @@ class BaseMCTSAgent(BaseAgent):
         reward = torch.tensor(reward).unsqueeze(0).to(self.device)
         self.action = self.policy(self.state)
 
-        #store the new transition in buffer
+        # store the new transition in buffer
         self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
                                                      self.state, self.action, False, self.time_step, 0))
-        #update target
+        # update target
         if self._target_vf['counter'] >= self._target_vf['update_rate']:
             self.setTargetValueFunction(self._vf['q'], 'q')
             # self.setTargetValueFunction(self._vf['s'], 's')
             self._target_vf['counter'] = 0
 
-        #update value function with the buffer
+        # update value function with the buffer
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
                 transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
@@ -150,24 +152,23 @@ class BaseMCTSAgent(BaseAgent):
                 ind = int(np.random.rand() * self.num_actions)
                 return self.action_list[ind]
             return self.mcts(state)
-            v = []
-            for i, action in enumerate(self.action_list):
-                if self.policy_values == 'q':
-                    v.append(self.getStateActionValue(state, action, vf_type='q'))
-                elif self.policy_values == 's':
-                    v.append(self.getStateActionValue(state, vf_type='s'))
+            # v = []
+            # for i, action in enumerate(self.action_list):
+            #     if self.policy_values == 'q':
+            #         v.append(self.getStateActionValue(state, action, vf_type='q'))
+            #     elif self.policy_values == 's':
+            #         v.append(self.getStateActionValue(state, vf_type='s'))
+            #
+            #     elif self.policy_values == 'qs':
+            #         q = self.getStateActionValue(state, action, vf_type='q')
+            #         s = self.getStateActionValue(state, vf_type='s')
+            #         v.append((q + s) / 2)
+            #     else:
+            #         raise ValueError('policy is not defined')
+            # ind = np.argmax(v)
+            # return self.action_list[ind]
 
-                elif self.policy_values == 'qs':
-                    q = self.getStateActionValue(state, action, vf_type='q')
-                    s = self.getStateActionValue(state, vf_type='s')
-                    v.append((q + s) / 2)
-                else:
-                    raise ValueError('policy is not defined')
-            ind = np.argmax(v)
-            return self.action_list[ind]
-
-
-# ***
+    # ***
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
         optimizer = optim.SGD(network.parameters(), lr=step_size)
@@ -178,7 +179,7 @@ class BaseMCTSAgent(BaseAgent):
         #     f.data.sub_(step_size * f.grad.data)
         # network.zero_grad()
 
-# ***
+    # ***
     def init_q_value_function_network(self, state):
         '''
         :param state: torch -> (1, state)
@@ -186,9 +187,9 @@ class BaseMCTSAgent(BaseAgent):
         '''
         nn_state_shape = state.shape
         self._vf['q']['network'] = StateActionVFNN4(nn_state_shape, self.num_actions,
-                                                   self._vf['q']['layers_type'],
-                                                   self._vf['q']['layers_features'],
-                                                   self._vf['q']['action_layer_num']).to(self.device)
+                                                    self._vf['q']['layers_type'],
+                                                    self._vf['q']['layers_features'],
+                                                    self._vf['q']['action_layer_num']).to(self.device)
 
     def init_s_value_function_network(self, state):
         '''
@@ -199,8 +200,8 @@ class BaseMCTSAgent(BaseAgent):
         self._vf['s']['network'] = []
         for i in range(self.num_actions):
             self._vf['s']['network'].append(StateVFNN(nn_state_shape,
-                                                     self._vf['s']['layers_type'],
-                                                     self._vf['s']['layers_features']).to(self.device))
+                                                      self._vf['s']['layers_type'],
+                                                      self._vf['s']['layers_features']).to(self.device))
 
     def init_s_representation_network(self, observation):
         '''
@@ -209,10 +210,10 @@ class BaseMCTSAgent(BaseAgent):
         '''
         nn_state_shape = observation.shape
         self._sr['network'] = StateRepresentation(nn_state_shape,
-                                                 self._sr['layers_type'],
-                                                 self._sr['layers_features']).to(self.device)
+                                                  self._sr['layers_type'],
+                                                  self._sr['layers_features']).to(self.device)
 
-# ***
+    # ***
     def updateValueFunction(self, transition_batch, vf_type):
         for i, data in enumerate(transition_batch):
             prev_state, prev_action, reward, state, action, _, t, error = data
@@ -275,7 +276,7 @@ class BaseMCTSAgent(BaseAgent):
             return value
         else:
             # state value (no gradient)
-            if gradient :
+            if gradient:
                 raise ValueError("cannot calculate the gradient for state values!")
             sum = 0
             for action in self.action_list:
@@ -298,7 +299,7 @@ class BaseMCTSAgent(BaseAgent):
 
             return sum / len(self.action_list)
 
-# ***
+    # ***
     def getStateRepresentation(self, observation, gradient=False):
         '''
         :param observation: numpy array -> [obs_shape]
@@ -318,16 +319,16 @@ class BaseMCTSAgent(BaseAgent):
             self.updateNetworkWeights(self._sr['network'], self._sr['step_size'] / self._sr['batch_size'])
             self._sr['batch_counter'] = 0
 
-# ***
+    # ***
     def setTargetValueFunction(self, vf, type):
         if self._target_vf['network'] is None:
             nn_state_shape = self.prev_state.shape
             self._target_vf['network'] = StateActionVFNN4(
-                                             nn_state_shape,
-                                             self.num_actions,
-                                             vf['layers_type'],
-                                             vf['layers_features'],
-                                             vf['action_layer_num']).to(self.device)
+                nn_state_shape,
+                self.num_actions,
+                vf['layers_type'],
+                vf['layers_features'],
+                vf['action_layer_num']).to(self.device)
 
         self._target_vf['network'].load_state_dict(vf['network'].state_dict())  # copy weights and stuff
         if type != 's':
@@ -381,7 +382,7 @@ class BaseMCTSAgent(BaseAgent):
 
             return sum / len(self.action_list)
 
-# ***
+    # ***
     def getTransitionFromBuffer(self, n):
         # both model and value function are using this buffer
         if len(self.transition_buffer) < n:
@@ -396,7 +397,7 @@ class BaseMCTSAgent(BaseAgent):
     def removeFromTransitionBuffer(self):
         self.transition_buffer.pop(0)
 
-# ***
+    # ***
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
             if list(a) == list(action):
@@ -415,30 +416,75 @@ class BaseMCTSAgent(BaseAgent):
         closed_list = []
         for i in range(num_iteration):
             x = self.selection(tree)
-            self.expansion(x)
-            val = self.simulation(x)
-            self.backpropagation(tree, x)
-            
+            child = self.expansion(x)
+            val = self.simulation(child)
+            self.back_propagation(child, val)
 
     def selection(self, tree):
-        return tree
+        node = tree
+        while node.is_expanded:
+            max_child_node = node.children[0]
+            for i in range(1, len(node.children)):
+                next_child_node = node.children[i]
+                if next_child_node.get_mcts_val() > max_child_node.get_mcts_val():
+                    max_child_node = next_child_node
+            node = max_child_node
+        return node
 
-    def expansion(self, x):
-        pass
+    def expansion(self, node):
+        child = node.expand(self.model, self.action_list, self)
+        return child
 
-    def simulation(self, x):
-        pass
+    def simulation(self, node):
+        simulation_depth = 20
+        reward_sum = 0
+        for i in range(simulation_depth):
+            rand = int(np.random.rand() * len(self.action_list))
+            action = self.action_list[rand]
+            child_state, is_terminal, reward = self.model(node, action)
+            reward_sum += reward
+            if is_terminal:
+                return reward_sum
+            child = Node(child_state)
+            node = child
+        node_val = self.getStateActionValue(node.state, action=None, vf_type='s')
+        node.search_val = reward_sum + node_val
+        node.search_count += 1
+        return reward_sum + node_val
 
-    def backpropagation(self, tree, x):
-        pass
+    def back_propagation(self, node, new_val):
+        while node.par != None:
+            par_node = node.par
+            sum_val = par_node.search_count * par_node.search_val + new_val
+            par_node.search_count += 1
+            par_node.search_val = sum_val / par_node.search_count
+
 
 
 class Node:
-    def __init__(self, state):
+    def __init__(self, state, par=None, val=0, from_par_reward=0, from_root_reward=0):
         self.state = state
-        self.par = None
+        self.par = par
         self.children = []
-        self.has_expanded = False
+        self.is_expanded = False
+        self.val = val
+        self.from_par_reward = from_par_reward
+        self.from_root_reward = from_root_reward
+        self.search_val = None
+        self.search_count = 0
 
+    def expand(self, model, action_list, agent):
+        for action in action_list:
+            child_state, is_terminal, reward = model(self.state, action)
+            if is_terminal:
+                continue
+            child_val = agent.getStateActionValue(child_state, action=None, vf_type='s')
+            child_from_par_reward = self.from_root_reward + reward
+            child = Node(child_state, self, child_val, reward, child_from_par_reward)
+            self.children.append(child)
+        self.is_expanded = True
+        rand = int(np.random.rand() * len(self.children))
+        return self.children(rand)
 
-
+    def get_mcts_val(self):
+        return self.val + self.from_root_reward
