@@ -75,7 +75,7 @@ if True:
     color=['blue','red','green']
     agent_list = ['multi', 'single']
 
-    with open('model_error_run2.npy', 'rb') as f:
+    with open('model_error_run3.npy', 'rb') as f:
         model_error = np.load(f)
         model_error_samples = np.load(f)
 
