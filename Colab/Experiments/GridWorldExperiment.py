@@ -586,8 +586,8 @@ class RunExperiment2():
                 # initializing the agent
                 agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 1.0,
-                                       'max_stepsize': vf_stepsize,#[agent_counter]
-                                       'model_stepsize': model_stepsize,#[agent_counter]
+                                       'max_stepsize': vf_stepsize,#[agent_counter],
+                                       'model_stepsize': model_stepsize,#[agent_counter],
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
