@@ -10,7 +10,7 @@ if __name__ == '__main__':
     # experiment = RunExperiment2()
     # experiment.run_experiment(s_vf, s_md)
 
-    parameter_sweep = False
+    parameter_sweep = True
     if parameter_sweep:
         # vf_stepsize = [2 ** -(i+3) for i in range(8)]
         vf_stepsize = [2 ** -6]
