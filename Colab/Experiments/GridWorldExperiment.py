@@ -540,8 +540,10 @@ class RunExperiment():
 
 class RunExperiment2():
     def __init__(self):
-
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        gpu_counts = torch.cuda.device_count()
+        device_num = random.randint(0, gpu_counts-1)
+        self.device = torch.device("cuda:"+str(device_num) if torch.cuda.is_available() else "cpu")
+        
         self.agents = config.agent_list
         self.pre_trained = config.pre_trained
         self.show_pre_trained_error_grid = config.show_pre_trained_error_grid
