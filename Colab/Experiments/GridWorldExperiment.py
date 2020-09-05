@@ -541,8 +541,7 @@ class RunExperiment():
 class RunExperiment2():
     def __init__(self):
         gpu_counts = torch.cuda.device_count()
-        device_num = random.randint(0, gpu_counts-1)
-        self.device = torch.device("cuda:"+str(device_num) if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:"+str(random.randint(0, gpu_counts-1)) if torch.cuda.is_available() else "cpu")
         
         self.agents = config.agent_list
         self.pre_trained = config.pre_trained

@@ -79,16 +79,15 @@ if True:
         model_error = np.load(f)
         model_error_samples = np.load(f)
 
-
     print(model_error)
     print(model_error_samples)
-    for r in range(model_error.shape[1]):
-        for a in range(model_error.shape[0]):
-            agent_name = config.agent_list[a].name
-            utils.draw_plot(model_error_samples[a, r], model_error[a, r],
-                            xlabel='num_samples', ylabel='model_error', show=False,
-                            label=agent_name, title='run_number ' + str(r + 1))
-        plt.show()
+    # for r in range(model_error.shape[1]):
+    #     for a in range(model_error.shape[0]):
+    #         agent_name = config.agent_list[a].name
+    #         utils.draw_plot(model_error_samples[a, r], model_error[a, r],
+    #                         xlabel='num_samples', ylabel='model_error', show=False,
+    #                         label=agent_name, title='run_number ' + str(r + 1))
+    #     plt.show()
 
 
     # for agent_num in range(len(config.agent_list)):
@@ -103,7 +102,7 @@ if True:
     # plt.savefig('model_error')
 
 
-    for agent_num in range(len(config.agent_list)):
+    for agent_num in range(len(agent_list)):
         x = np.mean(model_error_samples[agent_num], axis=0)
         y = np.mean(model_error[agent_num], axis=0)
         yerr = np.std(model_error[agent_num], axis=0)
