@@ -6,7 +6,7 @@ from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
-num_runs = 10
+num_runs = 3
 num_episode = 200
 max_step_each_episode = 50
 
