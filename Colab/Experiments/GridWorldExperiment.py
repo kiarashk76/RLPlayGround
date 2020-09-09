@@ -300,43 +300,35 @@ class GridWorldExperiment(BaseExperiment):
                 visit_count[(pos, tuple(action))] = 0
         return visit_count
 
-'kjkjk'
-
 class RunExperiment():
     def __init__(self):
         gpu_counts = torch.cuda.device_count()
         self.device = torch.device("cuda:"+str(random.randint(0, gpu_counts-1)) if torch.cuda.is_available() else "cpu")
         
-        self.agents = config.agent_list
-        self.pre_trained = config.pre_trained
-        self.show_pre_trained_error_grid = config.show_pre_trained_error_grid
-        self.show_values_grid = config.show_values_grid
-        self.show_model_error_grid = config.show_model_error_grid
+
+        # self.show_pre_trained_error_grid = config.show_pre_trained_error_grid
+        # self.show_values_grid = config.show_values_grid
+        # self.show_model_error_grid = config.show_model_error_grid
 
         # Assuming that we are on a CUDA machine, this should print a CUDA device:
         print(self.device)
 
-    def run_experiment(self, vf_stepsize, model_stepsize):
+    def run_experiment(self, experiment_object_list):
         num_runs = config.num_runs
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
-        self.num_steps_run_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
-        self.model_error_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.float)
-        self.agent_model_error_list = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.float)
-        self.model_error_samples = np.zeros([len(self.agents), num_runs, num_episode], dtype=np.int)
+        self.num_steps_run_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
+        self.model_error_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
+        self.agent_model_error_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
+        self.model_error_samples = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
 
-        agent_counter = -1
-
-        for agent_class, pre_train in zip(self.agents, self.pre_trained):
-            agent_counter += 1
+        for i, obj in enumerate(experiment_object_list):
             pre_trained_plot_y_run_list = []
             pre_trained_plot_x_run_list = []
-
-
             for r in range(num_runs):
                 print("starting runtime ", r+1)
-                # env = GridWorld(params=config.empty_room_params)
-                env = GridWorldRooms(params=config.n_room_params)
+                env = GridWorld(params=config.empty_room_params)
+                # env = GridWorldRooms(params=config.n_room_params)
 
                 train, test = data_store(env)
                 reward_function = env.rewardFunction
@@ -344,55 +336,33 @@ class RunExperiment():
 
                 # Pre-train the model
                 pre_trained_model, pre_trained_visit_counts, pre_trained_plot_y, pre_trained_plot_x = \
-                    self.pretrain_model(pre_train, env)
+                    self.pretrain_model(obj.pre_trained, env)
                 pre_trained_plot_y_run_list.append(pre_trained_plot_y)
                 pre_trained_plot_x_run_list.append(pre_trained_plot_x)
 
                 # initializing the agent
-                agent =  agent_class({'action_list': np.asarray(env.getAllActions()),
+                agent = obj.agent_class({'action_list': np.asarray(env.getAllActions()),
                                        'gamma': 1.0, 'epsilon': 0.1,
-                                       'max_stepsize': vf_stepsize[agent_counter],
-                                       'model_stepsize': model_stepsize[agent_counter],
+                                       'max_stepsize': obj.vf_step_size,
+                                       'model_stepsize': obj.model_step_size,
                                        'reward_function': reward_function,
                                        'goal': goal,
                                        'device': self.device,
                                        'model': pre_trained_model,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction})
-                if agent_counter == 0:
-                    # agent.is_using_error = True
-                    agent.model['forward']['num_networks'] = 1
-                    agent.model['forward']['layers_type'] = ['fc']
-                    agent.model['forward']['layers_features'] = [128]
-                elif agent_counter == 1:
-                    # agent.is_using_error = False
-                    agent.model['forward']['num_networks'] = 2
-                    agent.model['forward']['layers_type'] = ['fc']
-                    agent.model['forward']['layers_features'] = [64]
-                elif agent_counter == 2:
-                    # agent.is_using_error = False
-                    agent.model['forward']['num_networks'] = 4
-                    agent.model['forward']['layers_type'] = ['fc']
-                    agent.model['forward']['layers_features'] = [32]
-                # elif agent_counter == 3:
-                #     # agent.is_using_error = False
-                #     agent.model['forward']['num_networks'] = 8
-                #     agent.model['forward']['layers_type'] = ['fc']
-                #     agent.model['forward']['layers_features'] = [16]
-                # if agent_counter == 4:
-                #     # agent.is_using_error = False
-                #     agent.model['forward']['num_networks'] = 16
-                #     agent.model['forward']['layers_type'] = ['fc']
-                #     agent.model['forward']['layers_features'] = [8]
+                model_type = obj.model['type']
+                agent.model[model_type]['num_networks'] = obj.model['num_networks']
+                agent.model[model_type]['layers_type'] = obj.model['layers_type']
+                agent.model[model_type]['layers_features'] = obj.model['layers_features']
 
-                # make an instance of the experiment for (agent, env)
+                #initialize experiment
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
-
-                    self.num_steps_run_list[agent_counter, r, e] = experiment.num_steps
+                    self.num_steps_run_list[i, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
                         model_type = list(agent.model.keys())[0]
                         # agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
@@ -404,9 +374,9 @@ class RunExperiment():
                                                                          test,
                                                                          type=str(model_type),
                                                                          true_transition_function=env.transitionFunction)
-                        self.model_error_list[agent_counter, r, e] = model_error
+                        self.model_error_list[i, r, e] = model_error
                         # self.agent_model_error_list[agent_counter, r, e] = agent_model_error
-                        self.model_error_samples[agent_counter, r, e] = experiment.num_samples
+                        self.model_error_samples[i, r, e] = experiment.num_samples
 
                 # *********
                 # model_type = list(agent.model.keys())[0]
@@ -419,19 +389,14 @@ class RunExperiment():
                 #                 obstacles_pos=env.get_obstacles_pos())
                 # *********
 
-            # self.calculate_model_error(agent, env)
-
         self.show_model_error_plot()
         # self.show_agent_model_error_plot()
-        print("vf step_size:", vf_stepsize)
-        print("md step_size:", model_stepsize)
-        # with open('num_steps_run_list.npy', 'wb') as f:
-        #     np.save(f, self.num_steps_run_list)
+        with open('num_steps_run_list.npy', 'wb') as f:
+            np.save(f, self.num_steps_run_list)
         with open('model_error_run4.npy', 'wb') as f:
             np.save(f, self.model_error_list)
             np.save(f, self.model_error_samples)
         self.show_num_steps_plot()
-
 
     def calculate_model_error(self, agent, env):
         error = {}

@@ -43,6 +43,7 @@ class StateTransitionModel(nn.Module):
                     self.add_module('hidden_layer_'+str(i), layer)
                     self.layers.append(layer)
             else:
+                print(layer)
                 raise ValueError("layer is not defined")
 
         if self.action_layer_num < len(self.layers_type):

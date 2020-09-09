@@ -10,15 +10,6 @@ num_runs = 3
 num_episode = 200
 max_step_each_episode = 50
 
-# agent_list = [ForwardDynaAgent, BackwardDynaAgent, BackwardDynaAgent]
-agent_list = [ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent, ForwardDynaAgent]
-pre_trained = [None, None, None]#, 'forward', 'backward',]
-
-show_pre_trained_error_grid=[False, False],
-show_values_grid=[False, False],
-show_model_error_grid=[False, False]
-
-
 # # environment
 # empty room parameters
 _n = 4

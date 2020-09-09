@@ -1,24 +1,50 @@
 from Colab.Experiments.GridWorldExperiment import RunExperiment
+from Colab.Agents.BaseDynaAgent import BaseDynaAgent
+from Colab.Agents.RandomDynaAgent import RandomDynaAgent
+# from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
+# from Colab.Agents.BackwardDynaAgent import BackwardDynaAgent
+from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
+from Colab.Envs.GridWorldRooms import GridWorldRooms
+from Colab.Experiments.ExperimentObject import ExperimentObject
+from Colab.Agents.BaseMCTSAgent import BaseMCTSAgent
+
+
 if __name__ == '__main__':
     # experiment = RunExperiment()
     # experiment.run_experiment()
 
     # s_vf = [2 ** -6, 2 ** -5, 2 ** -7]
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
-    s_vf = [2 ** -6, 2 ** -6, 2 ** -6]
-    s_md = [2 ** -9, 2 ** -8, 2 ** -7]
-    experiment = RunExperiment()
-    experiment.run_experiment(s_vf, s_md)
 
-    parameter_sweep = False
-    if parameter_sweep:
-        # vf_stepsize = [2 ** -(i+3) for i in range(8)]
-        vf_stepsize = [2 ** -6]
-        model_stepsize = [2 ** -(i+3) for i in range(9)]
-        for c1, s_vf in enumerate(vf_stepsize):
-            for c2, s_md in enumerate(model_stepsize):
-                experiment = RunExperiment()
-                experiment.run_experiment(s_vf, s_md)
+    agent_class_list = [BaseMCTSAgent]
+
+    show_pre_trained_error_grid = [False, False],
+    show_values_grid = [False, False],
+    show_model_error_grid = [False, False]
+
+    s_vf_list = [2 ** -6]
+    s_md_list = [2 ** -9]
+
+    # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]},
+    #               {'type': 'forward', 'num_networks': 2, 'layers_type': ['fc'], 'layers_features': [64]},
+    #               {'type': 'forward', 'num_networks': 4, 'layers_type': ['fc'], 'layers_features': [32]}
+    #               ]
+
+    model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
+
+    experiment = RunExperiment()
+
+    experiment_object_list = []
+    for agent_class in agent_class_list:
+        for s_vf in s_vf_list:
+            for model in model_list:
+                for s_md in s_md_list:
+                    params = {'pre_trained':None, 'vf_step_size':s_vf, 'model':model, 'model_step_size':s_md}
+                    obj = ExperimentObject(agent_class, params)
+                    experiment_object_list.append(obj)
+
+
+    experiment.run_experiment(experiment_object_list)
 
 '''
 step_size: 1

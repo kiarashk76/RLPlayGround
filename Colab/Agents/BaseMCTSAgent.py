@@ -70,8 +70,17 @@ class BaseMCTSAgent(BaseAgent):
         self.device = params['device']
         self.goal = torch.from_numpy(params['goal']).float().to(self.device)
         self.true_model = params['true_fw_model']
-        self.model = params['fw_model']
-
+        self.model = {'forward': dict(network=params['model'],
+                                      step_size=0.01,
+                                      layers_type=['fc'],
+                                      layers_features=[64],
+                                      action_layer_number=2,
+                                      batch_size=4,
+                                      halluc_steps=2,
+                                      training=True,
+                                      plan_horizon=3,
+                                      plan_buffer_size=1,
+                                      plan_buffer=[])}
     def start(self, observation):
         '''
         :param observation: numpy array -> (observation shape)
@@ -88,7 +97,6 @@ class BaseMCTSAgent(BaseAgent):
             self.init_s_value_function_network(self.prev_state)  # a separate state VF for each action
         if self._target_vf['network'] is None:
             self.setTargetValueFunction(self._vf['q'], 'q')
-
         self.prev_action = self.policy(self.prev_state)
 
         return self.prev_action
@@ -152,21 +160,6 @@ class BaseMCTSAgent(BaseAgent):
                 ind = int(np.random.rand() * self.num_actions)
                 return self.action_list[ind]
             return self.mcts(state)
-            # v = []
-            # for i, action in enumerate(self.action_list):
-            #     if self.policy_values == 'q':
-            #         v.append(self.getStateActionValue(state, action, vf_type='q'))
-            #     elif self.policy_values == 's':
-            #         v.append(self.getStateActionValue(state, vf_type='s'))
-            #
-            #     elif self.policy_values == 'qs':
-            #         q = self.getStateActionValue(state, action, vf_type='q')
-            #         s = self.getStateActionValue(state, vf_type='s')
-            #         v.append((q + s) / 2)
-            #     else:
-            #         raise ValueError('policy is not defined')
-            # ind = np.argmax(v)
-            # return self.action_list[ind]
 
     # ***
     def updateNetworkWeights(self, network, step_size):
@@ -329,7 +322,6 @@ class BaseMCTSAgent(BaseAgent):
                 vf['layers_type'],
                 vf['layers_features'],
                 vf['action_layer_num']).to(self.device)
-
         self._target_vf['network'].load_state_dict(vf['network'].state_dict())  # copy weights and stuff
         if type != 's':
             self._target_vf['action_layer_num'] = vf['action_layer_num']
@@ -410,55 +402,74 @@ class BaseMCTSAgent(BaseAgent):
         return res
 
     def mcts(self, state):
-        num_iteration = 10
-        tree = Node(state)
-        open_list = []
-        closed_list = []
+        state = tuple(state[0].cpu().numpy())
+        num_iteration = 2
+        tree = Node(state, val=self.getStateValue(state))
         for i in range(num_iteration):
             x = self.selection(tree)
             child = self.expansion(x)
             val = self.simulation(child)
             self.back_propagation(child, val)
 
+        max_child_node = tree.children[0]
+        max_ind = 0
+        for i in range(1, len(tree.children)):
+            next_child_node = tree.children[i]
+            if next_child_node.get_mcts_val() > max_child_node.get_mcts_val():
+                max_child_node = next_child_node
+                max_ind = i
+        return self.action_list[i]
+
+
     def selection(self, tree):
         node = tree
         while node.is_expanded:
-            max_child_node = node.children[0]
-            for i in range(1, len(node.children)):
-                next_child_node = node.children[i]
-                if next_child_node.get_mcts_val() > max_child_node.get_mcts_val():
-                    max_child_node = next_child_node
+            max_value = -np.inf
+            max_child_node = None
+            for i in range(len(node.children)):
+                child = node.children[i]
+                if child.state is None:
+                    continue
+                child_value = child.get_mcts_val()
+                if child_value > max_value:
+                    max_value = child_value
+                    max_child_node = child
             node = max_child_node
         return node
 
     def expansion(self, node):
-        child = node.expand(self.model, self.action_list, self)
+        child = node.expand(self.true_model, self.action_list, self)
         return child
 
     def simulation(self, node):
-        simulation_depth = 20
+        simulation_depth = 10
         reward_sum = 0
         for i in range(simulation_depth):
             rand = int(np.random.rand() * len(self.action_list))
             action = self.action_list[rand]
-            child_state, is_terminal, reward = self.model(node, action)
+            child_state, is_terminal, reward = self.true_model(node.state, action)
             reward_sum += reward
             if is_terminal:
                 return reward_sum
             child = Node(child_state)
             node = child
-        node_val = self.getStateActionValue(node.state, action=None, vf_type='s')
-        node.search_val = reward_sum + node_val
-        node.search_count += 1
-        return reward_sum + node_val
+        node_val = self.getStateValue(node.state)
+        return node_val + reward_sum
 
     def back_propagation(self, node, new_val):
-        while node.par != None:
-            par_node = node.par
-            sum_val = par_node.search_count * par_node.search_val + new_val
-            par_node.search_count += 1
-            par_node.search_val = sum_val / par_node.search_count
+        while node is not None:
+            sum_val = node.search_count * node.search_val + new_val
+            node.search_count += 1
+            node.search_val = sum_val / node.search_count
+            new_val += node.from_par_reward
+            node = node.par
 
+    def getStateValue(self, state):
+        value = []
+        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0)
+        for action in self.action_list:
+            value.append(self.getStateActionValue(torch_state, action=action, vf_type='q'))
+        return max(value)
 
 
 class Node:
@@ -467,24 +478,29 @@ class Node:
         self.par = par
         self.children = []
         self.is_expanded = False
-        self.val = val
+        self.val = val #state value function
         self.from_par_reward = from_par_reward
         self.from_root_reward = from_root_reward
-        self.search_val = None
+        self.search_val = 0
         self.search_count = 0
 
     def expand(self, model, action_list, agent):
         for action in action_list:
-            child_state, is_terminal, reward = model(self.state, action)
+            state = self.state
+            child_state, is_terminal, reward = model(state, action)
             if is_terminal:
-                continue
-            child_val = agent.getStateActionValue(child_state, action=None, vf_type='s')
-            child_from_par_reward = self.from_root_reward + reward
-            child = Node(child_state, self, child_val, reward, child_from_par_reward)
+                child_state = None
+                child_val = 0
+            else:
+                child_val = agent.getStateValue(child_state)
+            child_from_root_reward = self.from_root_reward + reward
+            child = Node(child_state, self, child_val, reward, child_from_root_reward)
             self.children.append(child)
+
         self.is_expanded = True
         rand = int(np.random.rand() * len(self.children))
-        return self.children(rand)
+        return self.children[rand]
 
     def get_mcts_val(self):
-        return self.val + self.from_root_reward
+        #change
+        return self.search_val + self.from_root_reward
