@@ -117,7 +117,6 @@ if False:
     plt.savefig('results+errorbar')
     plt.show()
 
-
 if True:
     color=['blue','red','green']
     agent_list = ['1', '2', '4']
