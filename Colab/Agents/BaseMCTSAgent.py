@@ -13,6 +13,7 @@ from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionV
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
 
+debug = False
 
 class BaseMCTSAgent(BaseAgent):
     name = 'BaseDynaAgent'
@@ -63,7 +64,7 @@ class BaseMCTSAgent(BaseAgent):
                                counter=0,
                                layers_num=None,
                                action_layer_num=None,
-                               update_rate=1,
+                               update_rate=10,
                                type=None)
 
         self.reward_function = params['reward_function']
@@ -81,6 +82,7 @@ class BaseMCTSAgent(BaseAgent):
                                       plan_horizon=3,
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
+
     def start(self, observation):
         '''
         :param observation: numpy array -> (observation shape)
@@ -161,6 +163,27 @@ class BaseMCTSAgent(BaseAgent):
                 return self.action_list[ind]
             return self.mcts(state)
 
+
+            # if np.random.rand() <= self.epsilon:
+            #     ind = int(np.random.rand() * self.num_actions)
+            #     return self.action_list[ind]
+            # v = []
+            # for i, action in enumerate(self.action_list):
+            #     if self.policy_values == 'q':
+            #         v.append(self.getStateActionValue(state, action, vf_type='q'))
+            #     elif self.policy_values == 's':
+            #         v.append(self.getStateActionValue(state, vf_type='s'))
+            #
+            #     elif self.policy_values == 'qs':
+            #         q = self.getStateActionValue(state, action, vf_type='q')
+            #         s = self.getStateActionValue(state, vf_type='s')
+            #         v.append((q + s) / 2)
+            #     else:
+            #         raise ValueError('policy is not defined')
+            # ind = np.argmax(v)
+            # return self.action_list[ind]
+
+
     # ***
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
@@ -223,7 +246,7 @@ class BaseMCTSAgent(BaseAgent):
             if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
                 # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
-                target += self.gamma * self.getTargetValue(state, action)
+                target += self.gamma * max(self.getTargetValue(state, action) for action in self.action_list)
             input = self.getStateActionValue(prev_state, prev_action, vf_type='q', gradient=True)
             assert target.shape == input.shape, 'target and input must have same shapes'
             loss = nn.MSELoss()(input, target)
@@ -402,13 +425,25 @@ class BaseMCTSAgent(BaseAgent):
         return res
 
     def mcts(self, state):
-        state = tuple(state[0].cpu().numpy())
-        num_iteration = 2
+        state = state[0].cpu().numpy()
+        num_iteration = 1
         tree = Node(state, val=self.getStateValue(state))
         for i in range(num_iteration):
+            # if debug:
+            # print('-----------------------')
+            # print('mcts iteration num: ', i)
+          # print('selection----')
             x = self.selection(tree)
+            if debug:
+                print('selected:', type(x.state))
+                print('expansion----')
             child = self.expansion(x)
+            if debug:
+                print('expanded:', type(child.state))
+                print('simulation----')
             val = self.simulation(child)
+            if debug:
+                print('back propagation----')
             self.back_propagation(child, val)
 
         max_child_node = tree.children[0]
@@ -418,22 +453,17 @@ class BaseMCTSAgent(BaseAgent):
             if next_child_node.get_mcts_val() > max_child_node.get_mcts_val():
                 max_child_node = next_child_node
                 max_ind = i
-        return self.action_list[i]
-
+        selected_action = self.action_list[max_ind]
+        if debug:
+            for i in range(0, len(tree.children)):
+                print('mcts val:', tree.children[i].get_mcts_val())
+                print(state, ' ----- ', max_ind)
+        return selected_action
 
     def selection(self, tree):
         node = tree
         while node.is_expanded:
-            max_value = -np.inf
-            max_child_node = None
-            for i in range(len(node.children)):
-                child = node.children[i]
-                if child.state is None:
-                    continue
-                child_value = child.get_mcts_val()
-                if child_value > max_value:
-                    max_value = child_value
-                    max_child_node = child
+            max_child_node = self.expansion_policy(node, tree.search_count)
             node = max_child_node
         return node
 
@@ -442,27 +472,43 @@ class BaseMCTSAgent(BaseAgent):
         return child
 
     def simulation(self, node):
-        simulation_depth = 10
+        simulation_depth = 0
         reward_sum = 0
+        state = node.state
+        node_val = 0
+        is_terminal = False
         for i in range(simulation_depth):
             rand = int(np.random.rand() * len(self.action_list))
             action = self.action_list[rand]
-            child_state, is_terminal, reward = self.true_model(node.state, action)
+            child_state, is_terminal, reward = self.true_model(state, action)
             reward_sum += reward
             if is_terminal:
-                return reward_sum
-            child = Node(child_state)
-            node = child
-        node_val = self.getStateValue(node.state)
+                break
+            state = child_state
+        if not is_terminal:
+            node_val = self.getStateValue(state)
+            # node_val = -np.abs(state[0] - self.goal[0]) - np.abs(state[1] - self.goal[1])
         return node_val + reward_sum
 
     def back_propagation(self, node, new_val):
-        while node is not None:
-            sum_val = node.search_count * node.search_val + new_val
-            node.search_count += 1
-            node.search_val = sum_val / node.search_count
-            new_val += node.from_par_reward
-            node = node.par
+        #average of children
+        if node.back_prop_type == 0:
+            while node is not None:
+                sum_val = node.search_count * node.search_val + new_val
+                node.search_count += 1
+                node.search_val = sum_val / node.search_count
+                new_val += node.from_par_reward
+                node = node.par
+
+        #max of children
+        elif node.back_prop_type == 1:
+            while node is not None:
+                # if node.search_count == 0:
+                #     node.search_val = -np.inf
+                node.search_count += 1
+                node.search_val = max(node.search_val, new_val)
+                new_val = node.search_val + node.from_par_reward
+                node = node.par
 
     def getStateValue(self, state):
         value = []
@@ -471,6 +517,30 @@ class BaseMCTSAgent(BaseAgent):
             value.append(self.getStateActionValue(torch_state, action=action, vf_type='q'))
         return max(value)
 
+    def expansion_policy(self, node, N):
+        # print(N)
+        # c = 100
+        # max_value = -np.inf
+        # max_child_node = None
+        # for i in range(len(node.children)):
+        #     child = node.children[i]
+        #     if child.state is None:
+        #         continue
+        #     if child.search_count == 0:
+        #         return child
+        #     child_value = child.get_mcts_val() + c * np.sqrt(2 * np.log(N) / child.search_count)
+        #     if child_value > max_value:
+        #         max_value = child_value
+        #         max_child_node = child
+        # return max_child_node
+
+        non_terminal_children = []
+        for i in range(len(node.children)):
+            child = node.children[i]
+            if child.state is None:
+                continue
+            non_terminal_children.append(child)
+        return np.random.choice(non_terminal_children)
 
 class Node:
     def __init__(self, state, par=None, val=0, from_par_reward=0, from_root_reward=0):
@@ -481,26 +551,32 @@ class Node:
         self.val = val #state value function
         self.from_par_reward = from_par_reward
         self.from_root_reward = from_root_reward
-        self.search_val = 0
+        self.back_prop_type = 1 #0: average, 1: max
+        if self.back_prop_type == 0:
+            self.search_val = 0
+        else:
+            self.search_val = val
         self.search_count = 0
 
     def expand(self, model, action_list, agent):
+        non_terminal_children = []
         for action in action_list:
-            state = self.state
-            child_state, is_terminal, reward = model(state, action)
+            child_state, is_terminal, reward = model(self.state, action)
+            child_from_root_reward = self.from_root_reward + reward
             if is_terminal:
-                child_state = None
-                child_val = 0
+                child = Node(None, self, 0, reward, child_from_root_reward)
+                child.search_val = 0
             else:
                 child_val = agent.getStateValue(child_state)
-            child_from_root_reward = self.from_root_reward + reward
-            child = Node(child_state, self, child_val, reward, child_from_root_reward)
+                # child_val = -np.abs(child_state[0] - 0) - np.abs(child_state[1] - 3)
+                child = Node(child_state, self, child_val, reward, child_from_root_reward)
+                non_terminal_children.append(child)
             self.children.append(child)
-
         self.is_expanded = True
-        rand = int(np.random.rand() * len(self.children))
-        return self.children[rand]
+        rand = int(np.random.rand() * len(non_terminal_children))
+        return non_terminal_children[rand]
 
     def get_mcts_val(self):
         #change
         return self.search_val + self.from_root_reward
+        # return self.from_root_reward

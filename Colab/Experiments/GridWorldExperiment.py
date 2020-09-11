@@ -47,9 +47,9 @@ class GridWorldExperiment(BaseExperiment):
         obs = self.observationChannel(s)
         self.total_reward += reward
         if self._render_on and self.num_episodes >= 0:
-            self.environment.render()
-            # self.environment.render(values=self.calculateValues())
-            # self.environment.render(values= self.modelErrorCalculatedByAgent(self.agent.model_error))
+            # self.environment.render()
+            self.environment.render(values=self.calculateValues())
+            # self.environment.render (values= self.modelErrorCalculatedByAgent(self.agent.model_error))
             # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
             #                                                          self.environment.transitionFunction)[1])
             # self.environment.render(values= self.calculateModelError(self.agent.model['backward'],
@@ -342,7 +342,7 @@ class RunExperiment():
 
                 # initializing the agent
                 agent = obj.agent_class({'action_list': np.asarray(env.getAllActions()),
-                                       'gamma': 1.0, 'epsilon': 0.1,
+                                       'gamma': 1.0, 'epsilon': 0.0,
                                        'max_stepsize': obj.vf_step_size,
                                        'model_stepsize': obj.model_step_size,
                                        'reward_function': reward_function,
