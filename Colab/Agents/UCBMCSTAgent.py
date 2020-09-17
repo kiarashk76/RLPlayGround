@@ -20,6 +20,12 @@ debug = False
 class UCBMCTSAgent(BaseMCTSAgent):
     name = 'BaseDynaAgent'
 
+    def __init__(self, params={}):
+        # BaseMCTSAgent.__init__(self, params)
+        super().__init__(params)
+        self.c = params['c']
+
+
     def policy(self, state):
         '''
         :param state: torch -> (1, state_shape)
@@ -27,6 +33,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
         '''
         with torch.no_grad():
             return self.mcts(state)
+
 
     def mcts(self, state):
         # print('h')
@@ -44,7 +51,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
         for i in range(1, len(tree.children)):
             next_child_node = tree.children[i]
             # if next_child_node.search_count > max_child_node.search_count:
-            if next_child_node.get_ucb_val(tree.search_count) > max_child_node.get_ucb_val(tree.search_count):
+            if self.get_ucb_val(next_child_node) > self.get_ucb_val(max_child_node):
                 max_child_node = next_child_node
                 max_ind = i
         selected_action = self.action_list[max_ind]
@@ -116,7 +123,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
         max_val = -np.inf
         max_ind = 0
         for i in range(len(non_terminal_children)):
-            child_val = non_terminal_children[i].get_ucb_val(N)
+            child_val = self.get_ucb_val(non_terminal_children[i])
             if child_val > max_val:
                 max_val = child_val
                 max_ind = i
@@ -135,3 +142,8 @@ class UCBMCTSAgent(BaseMCTSAgent):
                 max_value = value
                 max_action = action
         return max_action
+
+    def get_ucb_val(self, node):
+        exploit = node.search_val + node.from_par_reward
+        explore = 2 * np.sqrt(node.par.search_count / node.search_count)
+        return exploit + self.c * explore

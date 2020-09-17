@@ -25,6 +25,9 @@ if __name__ == '__main__':
 
     s_vf_list = [2 ** -6]
     s_md_list = [2 ** -9]
+    c_list = [0.3, 1.0, 3.0, 10.0]
+
+
 
     # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]},
     #               {'type': 'forward', 'num_networks': 2, 'layers_type': ['fc'], 'layers_features': [64]},
@@ -40,9 +43,10 @@ if __name__ == '__main__':
         for s_vf in s_vf_list:
             for model in model_list:
                 for s_md in s_md_list:
-                    params = {'pre_trained':None, 'vf_step_size':s_vf, 'model':model, 'model_step_size':s_md}
-                    obj = ExperimentObject(agent_class, params)
-                    experiment_object_list.append(obj)
+                    for c in c_list:
+                        params = {'pre_trained':None, 'vf_step_size':s_vf, 'model':model, 'model_step_size':s_md, 'c': c}
+                        obj = ExperimentObject(agent_class, params)
+                        experiment_object_list.append(obj)
 
 
     experiment.run_experiment(experiment_object_list)

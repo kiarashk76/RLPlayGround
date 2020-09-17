@@ -83,6 +83,7 @@ class BaseMCTSAgent(BaseAgent):
                                       plan_buffer_size=1,
                                       plan_buffer=[])}
 
+
     def start(self, observation):
         '''
         :param observation: numpy array -> (observation shape)
@@ -526,6 +527,8 @@ class BaseMCTSAgent(BaseAgent):
             non_terminal_children.append(child)
         return np.random.choice(non_terminal_children)
 
+
+
 class Node:
     def __init__(self, state, par=None, val=0, from_par_reward=0, from_root_reward=0):
         self.state = state
@@ -541,7 +544,6 @@ class Node:
         else:
             self.search_val = val
         self.search_count = 1
-        self.c = 10.1
 
     def expand(self, model, action_list, agent):
         non_terminal_children = []
@@ -565,8 +567,3 @@ class Node:
         #change
         return self.search_val + self.from_root_reward
         # return self.from_root_reward
-
-    def get_ucb_val(self, N):
-        exploit = self.search_val + self.from_par_reward
-        explore = 2 * np.sqrt(N / self.search_count)
-        return exploit + self.c * explore

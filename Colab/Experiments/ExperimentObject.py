@@ -5,3 +5,4 @@ class ExperimentObject:
         self.vf_step_size = params['vf_step_size']
         self.model = params['model']
         self.model_step_size = params['model_step_size']
+        self.c = params['c']
