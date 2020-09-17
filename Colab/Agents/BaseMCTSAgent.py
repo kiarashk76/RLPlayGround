@@ -426,7 +426,7 @@ class BaseMCTSAgent(BaseAgent):
 
     def mcts(self, state):
         state = state[0].cpu().numpy()
-        num_iteration = 1
+        num_iteration = 10
         tree = Node(state, val=self.getStateValue(state))
         for i in range(num_iteration):
             # if debug:
@@ -518,22 +518,6 @@ class BaseMCTSAgent(BaseAgent):
         return max(value)
 
     def expansion_policy(self, node, N):
-        # print(N)
-        # c = 100
-        # max_value = -np.inf
-        # max_child_node = None
-        # for i in range(len(node.children)):
-        #     child = node.children[i]
-        #     if child.state is None:
-        #         continue
-        #     if child.search_count == 0:
-        #         return child
-        #     child_value = child.get_mcts_val() + c * np.sqrt(2 * np.log(N) / child.search_count)
-        #     if child_value > max_value:
-        #         max_value = child_value
-        #         max_child_node = child
-        # return max_child_node
-
         non_terminal_children = []
         for i in range(len(node.children)):
             child = node.children[i]
@@ -551,12 +535,13 @@ class Node:
         self.val = val #state value function
         self.from_par_reward = from_par_reward
         self.from_root_reward = from_root_reward
-        self.back_prop_type = 1 #0: average, 1: max
+        self.back_prop_type = 0 #0: average, 1: max
         if self.back_prop_type == 0:
-            self.search_val = 0
+            self.search_val = val
         else:
             self.search_val = val
-        self.search_count = 0
+        self.search_count = 1
+        self.c = 10.1
 
     def expand(self, model, action_list, agent):
         non_terminal_children = []
@@ -580,3 +565,8 @@ class Node:
         #change
         return self.search_val + self.from_root_reward
         # return self.from_root_reward
+
+    def get_ucb_val(self, N):
+        exploit = self.search_val + self.from_par_reward
+        explore = 2 * np.sqrt(N / self.search_count)
+        return exploit + self.c * explore

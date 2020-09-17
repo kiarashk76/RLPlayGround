@@ -7,6 +7,7 @@ from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 from Colab.Experiments.ExperimentObject import ExperimentObject
 from Colab.Agents.BaseMCTSAgent import BaseMCTSAgent
+from Colab.Agents.UCBMCSTAgent import UCBMCTSAgent
 
 
 if __name__ == '__main__':
@@ -16,7 +17,7 @@ if __name__ == '__main__':
     # s_vf = [2 ** -6, 2 ** -5, 2 ** -7]
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
-    agent_class_list = [BaseMCTSAgent]
+    agent_class_list = [UCBMCTSAgent]
 
     show_pre_trained_error_grid = [False, False],
     show_values_grid = [False, False],
