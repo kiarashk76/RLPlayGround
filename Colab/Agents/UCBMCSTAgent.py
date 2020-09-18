@@ -137,7 +137,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
             return self.action_list[int(np.random.rand() * len(self.action_list))]
         max_value = -np.inf
         max_action = None
-        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0)
+        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0).to(self.device)
         for action in self.action_list:
             value = self.getStateActionValue(torch_state, action=action, vf_type='q')
             if value > max_value:
