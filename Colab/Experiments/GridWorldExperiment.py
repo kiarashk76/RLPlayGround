@@ -25,14 +25,15 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
-        if   params is None:
-            params = {'render': False}
+        if params is None:
+            params = {'render': True}
+        super().__init__(agent, env)
+
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
         self.visit_counts = self.createVisitCounts(env)
         self.num_samples = 0
         self.device = device
-        super().__init__(agent, env)
 
     def start(self):
         self.num_steps = 0
@@ -353,9 +354,10 @@ class RunExperiment():
                                        'true_fw_model': env.fullTransitionFunction,
                                        'c': obj.c})
                 model_type = obj.model['type']
-                agent.model[model_type]['num_networks'] = obj.model['num_networks']
-                agent.model[model_type]['layers_type'] = obj.model['layers_type']
-                agent.model[model_type]['layers_features'] = obj.model['layers_features']
+                if model_type is not None:
+                    agent.model[model_type]['num_networks'] = obj.model['num_networks']
+                    agent.model[model_type]['layers_type'] = obj.model['layers_type']
+                    agent.model[model_type]['layers_features'] = obj.model['layers_features']
 
                 #initialize experiment
                 experiment = GridWorldExperiment(agent, env, self.device)

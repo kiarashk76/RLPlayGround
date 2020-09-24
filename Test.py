@@ -9,8 +9,7 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
-
-num_runs = 20
+num_runs = 1
 num_data_points = 5000
 num_epochs = 300
 range_data_points = (-1, 2)
@@ -43,6 +42,8 @@ class StateTransitionModel(nn.Module):
         l = torch.relu(self.layer1(x))
         l = self.head(l)
         return l
+
+
 def distance(a,b):
     return torch.dist(a,b)
 def train(model, x, y):
@@ -136,27 +137,42 @@ for r in range(num_runs):
     error_multi_over_runs.append(error_list_multi)
 
     #test
-    # with torch.no_grad():
-    #     y_hat_single = single_model(torch.from_numpy(x).float())
-    #
-    #     y_hat_each = []
-    #     for c, mod in enumerate(multi_model):
-    #         y_hat_each.append( mod(torch.from_numpy(x).float()))
-    #
-    #     y_hat_multi = []
-    #     for i in range(num_data_points):
-    #         dif = []
-    #         for y_hat in y_hat_each:
-    #             dif.append(distance(y_hat[i], torch.from_numpy(y[i]).float()))
-    #         ind = np.argmin(dif)
-    #         y_hat_multi.append(y_hat_each[ind][i])
-    #
-    # plt.title('function')
-    # plt.plot(x, y, 'g', label='ground truth')
-    # plt.plot(x, y_hat_single, 'r', label='single model')
-    # plt.plot(x, y_hat_multi, 'b', label='multi model')
-    # plt.legend()
-    # plt.show()
+    with torch.no_grad():
+        y_hat_single = single_model(torch.from_numpy(x).float())
+
+        y_hat_each = []
+        for c, mod in enumerate(multi_model):
+            y_hat_each.append( mod(torch.from_numpy(x).float()))
+
+        y_hat_multi = []
+        y_hat_multi2 = [[],[],[],[]]
+        x_hat_multi = [[],[],[],[]]
+        for i in range(num_data_points):
+            dif = []
+            for y_hat in y_hat_each:
+                dif.append(distance(y_hat[i], torch.from_numpy(y[i]).float()))
+            ind = np.argmin(dif)
+            y_hat_multi.append(y_hat_each[ind][i])
+
+            x_hat_multi[ind].append(x[i])
+            y_hat_multi2[ind].append(y_hat_each[ind][i])
+
+
+    plt.title('function')
+    plt.plot(x, y, 'k', label='ground truth')
+    plt.plot(x, y_hat_single, 'r', label='single model')
+    plt.plot(x, y_hat_multi, 'b', label='multi model')
+    plt.legend()
+    plt.show()
+
+    plt.plot(x, y, 'k', label='ground truth')
+    plt.plot(x_hat_multi[0], y_hat_multi2[0],'c', label='0')
+    plt.plot(x_hat_multi[1], y_hat_multi2[1],'m', label='1')
+    plt.plot(x_hat_multi[2], y_hat_multi2[2],'y', label='2')
+    plt.plot(x_hat_multi[3], y_hat_multi2[3],'g', label='3')
+
+    plt.legend()
+    plt.show()
     #
     # plt.title('model error')
     # plt.plot(error_list_single,'r', label='single model')
@@ -168,10 +184,10 @@ for r in range(num_runs):
 err_multi = np.asarray(error_multi_over_runs)
 err_single = np.asarray(error_single_over_runs)
 
-with open('multi.npy', 'wb') as f:
-    np.save(f, err_multi)
-with open('single.npy', 'wb') as f:
-    np.save(f, err_single)
+# with open('multi.npy', 'wb') as f:
+#     np.save(f, err_multi)
+# with open('single.npy', 'wb') as f:
+#     np.save(f, err_single)
 
 err_multi_mean = np.mean(err_multi, axis=0)
 err_multi_bar = np.std(err_multi, axis=0)
