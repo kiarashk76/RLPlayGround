@@ -107,11 +107,13 @@ class UCBMCTSAgent(BaseMCTSAgent):
 
     def getStateValue(self, state):
         epsilon = 0.1
-        value = []
-        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0)
+        values = []
+        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0).to(self.device)
         for action in self.action_list:
-            value.append(self.getTargetValue(torch_state, action=action))
-        return (1 - epsilon) * max(value) + epsilon * sum(value) / len(value)
+            torch_value = self.getTargetValue(torch_state, action=action)
+            value = torch_value[0].cpu().numpy()
+            values.append(value)
+        return (1 - epsilon) * max(values) + epsilon * sum(values) / len(values)
 
     def selection_policy(self, node, N):
         non_terminal_children = []
@@ -135,7 +137,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
             return self.action_list[int(np.random.rand() * len(self.action_list))]
         max_value = -np.inf
         max_action = None
-        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0)
+        torch_state = torch.from_numpy(np.asarray(state)).unsqueeze(0).to(self.device)
         for action in self.action_list:
             value = self.getStateActionValue(torch_state, action=action, vf_type='q')
             if value > max_value:
