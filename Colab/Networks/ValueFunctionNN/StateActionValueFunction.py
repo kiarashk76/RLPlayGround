@@ -215,22 +215,30 @@ class StateActionVFNN4(nn.Module): # last layer has number of actions' output
             else:
                 raise ValueError("layer is not defined")
 
-        if self.action_layer_num == len(self.layers_type):
-            self.head = nn.Linear(layers_features[-1] + num_actions, 1)
-            # nn.init.normal_(self.head.weight)
+        if len(layers_type) > 0 :
+            if self.action_layer_num == len(self.layers_type):
+                self.head = nn.Linear(layers_features[-1] + num_actions, 1)
+                # nn.init.normal_(self.head.weight)
 
-        elif self.action_layer_num == len(self.layers_type) + 1:
-            self.head = nn.Linear(layers_features[-1], num_actions)
-            # nn.init.normal_(self.head.weight)
+            elif self.action_layer_num == len(self.layers_type) + 1:
+                self.head = nn.Linear(layers_features[-1], num_actions)
+                # nn.init.normal_(self.head.weight)
 
+            else:
+                self.head = nn.Linear(layers_features[-1], 1)
+                # nn.init.normal_(self.head.weight)
         else:
-            self.head = nn.Linear(layers_features[-1], 1)
-            # nn.init.normal_(self.head.weight)
+            # simple linear regression
+            if self.action_layer_num == len(self.layers_type):
+                self.head = nn.Linear(state_shape[1] + num_actions, 1, bias=False)
+            elif self.action_layer_num == len(self.layers_type) + 1:
+                self.head = nn.Linear(state_shape[1], num_actions, bias=False)
+                # nn.init.normal_(self.head.weight)
 
     def forward(self, state, action=None):
         if self.action_layer_num != len(self.layers) + 1 and action is None:
             raise ValueError("action is not given")
-        x = 0
+        x = state.flatten(start_dim= 1)
         for i, layer in enumerate(self.layers_type):
             if layer == 'conv':
                 raise NotImplemented("convolutional layer is not implemented")

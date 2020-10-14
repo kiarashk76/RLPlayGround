@@ -3,6 +3,34 @@ import matplotlib.pyplot as plt
 import Colab.utils as utils, Colab.config as config
 
 
+
+with open('multi.npy', 'rb') as f:
+    err_multi = np.load(f)
+with open('single.npy', 'rb') as f:
+    err_single = np.load(f)
+
+err_multi_mean = np.mean(err_multi, axis=0)
+err_multi_bar = np.std(err_multi, axis=0)
+
+err_single_mean = np.mean(err_single, axis=0)
+err_single_bar = np.std(err_single, axis=0)
+
+plt.plot(err_single_mean,'r', label='single model')
+plt.fill_between(range(len(err_single_mean)),
+                 err_single_mean - err_single_bar,
+                 err_single_mean + err_single_bar,
+                 facecolor='red', alpha=0.2, edgecolor='none')
+
+plt.plot(err_multi_mean,'b', label='multi model')
+plt.fill_between(range(len(err_multi_mean)),
+                 err_multi_mean - err_multi_bar,
+                 err_multi_mean + err_multi_bar,
+                 facecolor='blue', alpha=0.2, edgecolor='none')
+
+plt.legend()
+plt.show()
+
+exit(0)
 '''
 model_error0.125.npy
 inf 1

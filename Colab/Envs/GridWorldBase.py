@@ -67,7 +67,7 @@ class GridWorld():
                 raise ValueError("initial position is out of range")
         self._init_pos = params['init_state']
         self.addObstacles(params['obstacles_pos'], self._grid)
-
+        self.__createOnehotMap()
         self.screen = None # for visualization
 
     def start(self):
@@ -96,6 +96,9 @@ class GridWorld():
 
         elif self._state_mode == 'nei_obs':
             raise NotImplemented("need to be implemented")  # a np.array of partially neighbours grid
+
+        elif self._state_mode == 'one_hot':
+            self._state = self.one_hot_map[self._agent_pos]
 
         else:
             raise ValueError("state type is unknown")
@@ -131,6 +134,9 @@ class GridWorld():
         elif self._state_mode == 'nei_obs':
             raise NotImplemented("need to be implemented")  # a np.array of partially neighbours grid
 
+        elif self._state_mode == 'one_hot':
+            self._state = self.one_hot_map[self._agent_pos]
+
         else:
             raise ValueError("state type is unknown")
 
@@ -161,6 +167,12 @@ class GridWorld():
 
         elif state_type == 'nei_obs':
             raise NotImplemented("need to be implemented")
+
+        elif self._state_mode == 'one_hot':
+            for pos in agent_pos_list:
+                state_list.append(self.one_hot_map[pos])
+            return state_list
+
         else:
             raise ValueError("state type is unknown")
 
@@ -245,6 +257,9 @@ class GridWorld():
         elif state_type == 'coord':
             return np.asarray(pos)
 
+        elif state_type == 'one_hot':
+            return self.one_hot_map[pos]
+
         else:
             raise ValueError('state type not defined')
 
@@ -269,6 +284,12 @@ class GridWorld():
 
         elif state_type == 'coord':
             return tuple(state)
+
+        elif state_type == 'one_hot':
+            for i, pos in zip(state, self.getAllStates(state_type='coord')):
+                if i == 1:
+                    return tuple(pos)
+
         else:
             raise ValueError('state type not defined')
 
@@ -349,6 +370,14 @@ class GridWorld():
 
     def get_obstacles_pos(self):
         return self._obstacles_pos
+
+    def __createOnehotMap(self):
+        all_states = self.getAllStates('coord')
+        self.one_hot_map = {}
+        for i, s in enumerate(all_states):
+            res = np.zeros((len(all_states)))
+            res[i] = 1
+            self.one_hot_map[self.stateToPos(s, 'coord')] = res
 
     def render(self, grid= None, values= None):
         if grid == None:
@@ -483,9 +512,10 @@ class GridWorld():
         pygame.display.flip()
 
 
+
+
 if __name__ == "__main__":
     env = GridWorld()
-
 
 
 

@@ -13,6 +13,7 @@ from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionV
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
 
+
 class BaseDynaAgent(BaseAgent):
     name = 'BaseDynaAgent'
 
@@ -31,16 +32,16 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 100
+        self.transition_buffer_size = 1
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
         self._vf = {'q': dict(network=None,
-                             layers_type=['fc', 'fc'],
-                             layers_features=[2, 2],
-                             action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
-                             batch_size=10,
-                             step_size=params['max_stepsize'] / 10,
+                             layers_type=[],
+                             layers_features=[],
+                             action_layer_num=1,  # if one more than layer numbers => we will have num of actions output
+                             batch_size=1,
+                             step_size=params['max_stepsize'] / 1,
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
@@ -122,6 +123,7 @@ class BaseDynaAgent(BaseAgent):
         #train/plan with model
         self.trainModel()
         self.plan()
+
         self.prev_state = self.getStateRepresentation(observation)
         self.prev_action = self.action  # another option:** we can again call self.policy function **
 
@@ -221,6 +223,10 @@ class BaseDynaAgent(BaseAgent):
         for i, data in enumerate(transition_batch):
             prev_state, prev_action, reward, state, action, _, t, error = data
             self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
+        # print(np.nonzero(self._vf[vf_type]['network'].head.weight.grad),
+        #       np.nonzero(prev_state)[0][1], self.getActionIndex(prev_action))
+        # print(np.nonzero(self._vf[vf_type]['network'].head.bias.grad))
+
         self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'] * np.exp(-error))
         self._target_vf['counter'] += 1
 
