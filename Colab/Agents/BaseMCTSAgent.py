@@ -1,10 +1,8 @@
-import copy
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import torch.optim as optim
-from abc import abstractmethod
 import random
 
 import Colab.utils as utils
@@ -12,6 +10,7 @@ from Colab.Agents.BaseAgent import BaseAgent
 from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionVFNN3, StateActionVFNN4
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
+from Colab.DataStructures.Node import Node
 
 debug = False
 
@@ -39,7 +38,7 @@ class BaseMCTSAgent(BaseAgent):
 
         self._vf = {'q': dict(network=None,
                               layers_type=['fc', 'fc'],
-                              layers_features=[64, 32],
+                              layers_features=[2, 2],
                               action_layer_num=3,
                               # if one more than layer numbers => we will have num of actions output
                               batch_size=10,
@@ -164,39 +163,12 @@ class BaseMCTSAgent(BaseAgent):
                 return self.action_list[ind]
             return self.mcts(state)
 
-
-            # if np.random.rand() <= self.epsilon:
-            #     ind = int(np.random.rand() * self.num_actions)
-            #     return self.action_list[ind]
-            # v = []
-            # for i, action in enumerate(self.action_list):
-            #     if self.policy_values == 'q':
-            #         v.append(self.getStateActionValue(state, action, vf_type='q'))
-            #     elif self.policy_values == 's':
-            #         v.append(self.getStateActionValue(state, vf_type='s'))
-            #
-            #     elif self.policy_values == 'qs':
-            #         q = self.getStateActionValue(state, action, vf_type='q')
-            #         s = self.getStateActionValue(state, vf_type='s')
-            #         v.append((q + s) / 2)
-            #     else:
-            #         raise ValueError('policy is not defined')
-            # ind = np.argmax(v)
-            # return self.action_list[ind]
-
-
-    # ***
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
         optimizer = optim.SGD(network.parameters(), lr=step_size)
         optimizer.step()
         optimizer.zero_grad()
 
-        # for f in network.parameters():
-        #     f.data.sub_(step_size * f.grad.data)
-        # network.zero_grad()
-
-    # ***
     def init_q_value_function_network(self, state):
         '''
         :param state: torch -> (1, state)
@@ -230,7 +202,7 @@ class BaseMCTSAgent(BaseAgent):
                                                   self._sr['layers_type'],
                                                   self._sr['layers_features']).to(self.device)
 
-    # ***
+
     def updateValueFunction(self, transition_batch, vf_type):
         for i, data in enumerate(transition_batch):
             prev_state, prev_action, reward, state, action, _, t, error = data
@@ -398,7 +370,6 @@ class BaseMCTSAgent(BaseAgent):
 
             return sum / len(self.action_list)
 
-    # ***
     def getTransitionFromBuffer(self, n):
         # both model and value function are using this buffer
         if len(self.transition_buffer) < n:
@@ -413,7 +384,6 @@ class BaseMCTSAgent(BaseAgent):
     def removeFromTransitionBuffer(self):
         self.transition_buffer.pop(0)
 
-    # ***
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
             if list(a) == list(action):
@@ -526,44 +496,3 @@ class BaseMCTSAgent(BaseAgent):
                 continue
             non_terminal_children.append(child)
         return np.random.choice(non_terminal_children)
-
-
-
-class Node:
-    def __init__(self, state, par=None, val=0, from_par_reward=0, from_root_reward=0):
-        self.state = state
-        self.par = par
-        self.children = []
-        self.is_expanded = False
-        self.val = val #state value function
-        self.from_par_reward = from_par_reward
-        self.from_root_reward = from_root_reward
-        self.back_prop_type = 0 #0: average, 1: max
-        if self.back_prop_type == 0:
-            self.search_val = val
-        else:
-            self.search_val = val
-        self.search_count = 1
-
-    def expand(self, model, action_list, agent):
-        non_terminal_children = []
-        for action in action_list:
-            child_state, is_terminal, reward = model(self.state, action)
-            child_from_root_reward = self.from_root_reward + reward
-            if is_terminal:
-                child = Node(None, self, 0, reward, child_from_root_reward)
-                child.search_val = 0
-            else:
-                child_val = agent.getStateValue(child_state)
-                # child_val = -np.abs(child_state[0] - 0) - np.abs(child_state[1] - 3)
-                child = Node(child_state, self, child_val, reward, child_from_root_reward)
-                non_terminal_children.append(child)
-            self.children.append(child)
-        self.is_expanded = True
-        rand = int(np.random.rand() * len(non_terminal_children))
-        return non_terminal_children[rand]
-
-    def get_mcts_val(self):
-        #change
-        return self.search_val + self.from_root_reward
-        # return self.from_root_reward

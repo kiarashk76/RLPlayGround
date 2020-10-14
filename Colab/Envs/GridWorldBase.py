@@ -285,6 +285,7 @@ class GridWorld():
 
     def fullTransitionFunction(self, state, action, state_type='coord'):
         pos = self.stateToPos(state, state_type)
+        pos = self.stateToPos(state, state_type)
         pos = self.__transitionFunction(pos, action)
         is_terminal = self.__terminalFunction(pos)
         reward = self.__rewardFunction(pos)

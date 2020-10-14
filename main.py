@@ -18,6 +18,8 @@ if __name__ == '__main__':
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
     agent_class_list = [UCBMCTSAgent]
+    # agent_class_list = [BaseDynaAgent]
+
 
     show_pre_trained_error_grid = [False, False],
     show_values_grid = [False, False],
@@ -25,7 +27,7 @@ if __name__ == '__main__':
 
     s_vf_list = [2 ** -6]
     s_md_list = [2 ** -9]
-    c_list = [0.3, 1.0, 3.0, 10.0]
+    c_list = [1.0]
 
 
 
