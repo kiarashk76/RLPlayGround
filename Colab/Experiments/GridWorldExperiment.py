@@ -26,7 +26,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if params is None:
-            params = {'render': True}
+            params = {'render': False}
         super().__init__(agent, env)
 
         self._render_on = params['render']
@@ -352,7 +352,10 @@ class RunExperiment():
                                        'model': pre_trained_model,
                                        'true_bw_model': env.transitionFunctionBackward,
                                        'true_fw_model': env.fullTransitionFunction,
-                                       'c': obj.c})
+                                       'c': obj.c,
+                                       'num_iteration': obj.num_iteration,
+                                       'simulation_depth': obj.simulation_depth,
+                                       'num_simulation': obj.num_simulation})
                 model_type = obj.model['type']
                 if model_type is not None:
                     agent.model[model_type]['num_networks'] = obj.model['num_networks']

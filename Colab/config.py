@@ -12,7 +12,7 @@ max_step_each_episode = 50
 
 # # environment
 # empty room parameters
-_n = 4
+_n = 5
 empty_room_params = \
     {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'coord', #init_state (_n-1, 0)
     'obstacles_pos': [],

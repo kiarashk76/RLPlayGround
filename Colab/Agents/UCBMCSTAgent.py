@@ -13,9 +13,9 @@ class UCBMCTSAgent(BaseMCTSAgent):
         super().__init__(params)
         self.c = params['c']
         self.root = None
-        self.num_iteration = 2
-        self.simulation_depth = 20
-        self.num_simulation = 1
+        self.num_iteration = params['num_iteration'] #2
+        self.simulation_depth = params['simulation_depth'] #20
+        self.num_simulation = params['num_simulation'] #1
 
     def start(self, observation):
         self.root = None
@@ -109,7 +109,7 @@ class UCBMCTSAgent(BaseMCTSAgent):
             noise = np.abs(np.random.normal(mu - value, sigma))
             return value + noise
 
-    def selection_policy(self, node):
+    def selection_policy(self, node, N):
         non_terminal_children = []
         for i in range(len(node.children)):
             child = node.children[i]
