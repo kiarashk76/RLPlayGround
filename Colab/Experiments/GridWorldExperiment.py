@@ -6,6 +6,7 @@ import Colab.utils as utils, Colab.config as config
 import random
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
 from Colab.Envs.GridWorldRooms import GridWorldRooms
@@ -26,7 +27,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if params is None:
-            params = {'render': True}
+            params = {'render': False}
         super().__init__(agent, env)
 
         self._render_on = params['render']
@@ -72,7 +73,7 @@ class GridWorldExperiment(BaseExperiment):
         self.recordTrajectory(roat[1], roat[2], roat[0], roat[3])
         return roat
 
-    def runEpisode(self, max_steps=0):
+    def runEpisode(self, max_steps=0, print_steps= False):
         is_terminal = False
         self.start()
 
@@ -88,7 +89,8 @@ class GridWorldExperiment(BaseExperiment):
 
         self.num_episodes += 1
         self.num_steps_to_goal_list.append(self.num_steps)
-        print("num steps: ", self.num_steps)
+        if print_steps:
+            print("num steps: ", self.num_steps)
         return is_terminal
 
     def observationChannel(self, s):
@@ -323,11 +325,11 @@ class RunExperiment():
         self.agent_model_error_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
         self.model_error_samples = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
 
-        for i, obj in enumerate(experiment_object_list):
+        for i, obj in tqdm(enumerate(experiment_object_list)):
             pre_trained_plot_y_run_list = []
             pre_trained_plot_x_run_list = []
             for r in range(num_runs):
-                print("starting runtime ", r+1)
+                # print("starting runtime ", r+1)
                 # env = GridWorld(params=config.empty_room_params)
                 env = GridWorldRooms(params=config.n_room_params)
 
@@ -366,7 +368,7 @@ class RunExperiment():
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    print("starting episode ", e + 1)
+                    # print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':
