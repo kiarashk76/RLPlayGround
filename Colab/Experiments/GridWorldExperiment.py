@@ -26,7 +26,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 class GridWorldExperiment(BaseExperiment):
     def __init__(self, agent, env, device, params=None):
         if params is None:
-            params = {'render': False}
+            params = {'render': True}
         super().__init__(agent, env)
 
         self._render_on = params['render']
@@ -328,8 +328,8 @@ class RunExperiment():
             pre_trained_plot_x_run_list = []
             for r in range(num_runs):
                 print("starting runtime ", r+1)
-                env = GridWorld(params=config.empty_room_params)
-                # env = GridWorldRooms(params=config.n_room_params)
+                # env = GridWorld(params=config.empty_room_params)
+                env = GridWorldRooms(params=config.n_room_params)
 
                 train, test = data_store(env)
                 reward_function = env.rewardFunction

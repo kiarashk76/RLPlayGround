@@ -12,8 +12,8 @@ from Colab.Agents.UCBMCSTAgent import UCBMCTSAgent
 
 if __name__ == '__main__':
 
-    agent_class_list = [UCBMCTSAgent]
-    # agent_class_list = [BaseDynaAgent]
+    # agent_class_list = [UCBMCTSAgent]
+    agent_class_list = [BaseDynaAgent]
 
 
     show_pre_trained_error_grid = [False, False],
@@ -21,8 +21,8 @@ if __name__ == '__main__':
     show_model_error_grid = [False, False]
 
     # value function step size
-    s_vf_list = [2 ** -i for i in range(2, 11)]
-
+    # s_vf_list = [2 ** -i for i in range(2, 11)]
+    s_vf_list = [0.001]
     # model step size
     s_md_list = [2 ** -9]
 
@@ -38,7 +38,8 @@ if __name__ == '__main__':
     #               {'type': 'forward', 'num_networks': 4, 'layers_type': ['fc'], 'layers_features': [32]}
     #               ]
 
-    model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
+    # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
+    model_list = [{'type':None, 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
 
     experiment = RunExperiment()
 

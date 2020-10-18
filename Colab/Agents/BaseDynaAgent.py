@@ -32,14 +32,14 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 1
+        self.transition_buffer_size = 100
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
         self._vf = {'q': dict(network=None,
-                             layers_type=[],
-                             layers_features=[],
-                             action_layer_num=1,  # if one more than layer numbers => we will have num of actions output
+                             layers_type=['fc'],
+                             layers_features=[32],
+                             action_layer_num=2,  # if one more than layer numbers => we will have num of actions output
                              batch_size=1,
                              step_size=params['max_stepsize'] / 1,
                              training=True),
