@@ -1,4 +1,6 @@
-from Colab.Experiments.GridWorldExperiment import RunExperiment
+from Colab.Experiments.GridWorldExperiment import RunExperiment as GridWorld_RunExperiment
+from Colab.Experiments.MountainCarExperiment import RunExperiment as MountainCar_RunExperiment
+
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 # from Colab.Agents.ForwardDynaAgent import ForwardDynaAgent
@@ -17,15 +19,15 @@ if __name__ == '__main__':
     # s_vf = [2 ** -6, 2 ** -5, 2 ** -7]
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
-    agent_class_list = [UCBMCTSAgent]
-    # agent_class_list = [BaseDynaAgent]
+    # agent_class_list = [UCBMCTSAgent]
+    agent_class_list = [BaseDynaAgent]
 
 
     show_pre_trained_error_grid = [False, False],
     show_values_grid = [False, False],
     show_model_error_grid = [False, False]
 
-    s_vf_list = [2 ** -6]
+    s_vf_list = [2 ** -6, 2 ** -7, 2 ** -8]
     s_md_list = [2 ** -9]
     c_list = [1.0]
 
@@ -36,9 +38,9 @@ if __name__ == '__main__':
     #               {'type': 'forward', 'num_networks': 4, 'layers_type': ['fc'], 'layers_features': [32]}
     #               ]
 
-    model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
+    model_list = [{'type':None, 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
 
-    experiment = RunExperiment()
+    experiment = MountainCar_RunExperiment()
 
     experiment_object_list = []
     for agent_class in agent_class_list:
@@ -46,7 +48,7 @@ if __name__ == '__main__':
             for model in model_list:
                 for s_md in s_md_list:
                     for c in c_list:
-                        params = {'pre_trained':None, 'vf_step_size':s_vf, 'model':model, 'model_step_size':s_md, 'c': c}
+                        params = {'pre_trained': None, 'vf_step_size': s_vf, 'model': model, 'model_step_size': s_md, 'c': c}
                         obj = ExperimentObject(agent_class, params)
                         experiment_object_list.append(obj)
 

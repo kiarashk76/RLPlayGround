@@ -32,7 +32,7 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 1
+        self.transition_buffer_size = 100
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
@@ -40,8 +40,8 @@ class BaseDynaAgent(BaseAgent):
                              layers_type=[],
                              layers_features=[],
                              action_layer_num=1,  # if one more than layer numbers => we will have num of actions output
-                             batch_size=1,
-                             step_size=params['max_stepsize'] / 1,
+                             batch_size=16,
+                             step_size=params['max_stepsize'] / 16,
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
@@ -67,7 +67,8 @@ class BaseDynaAgent(BaseAgent):
 
         self.reward_function = params['reward_function']
         self.device = params['device']
-        self.goal = torch.from_numpy(params['goal']).float().to(self.device)
+        if params['goal'] is not None:
+            self.goal = torch.from_numpy(params['goal']).float().to(self.device)
 
     def start(self, observation):
         '''
@@ -409,7 +410,7 @@ class BaseDynaAgent(BaseAgent):
 # ***
     def getActionIndex(self, action):
         for i, a in enumerate(self.action_list):
-            if list(a) == list(action):
+            if np.array_equal(a, action):
                 return i
         raise ValueError("action is not defined")
 

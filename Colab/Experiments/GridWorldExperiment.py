@@ -10,6 +10,7 @@ from Colab.Experiments.BaseExperiment import BaseExperiment
 from Colab.Envs.GridWorldBase import GridWorld
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 # from Colab.Agents.ForwardErrorDynaAgent import ForwardErrorDynaAgent as ForwardDynaAgent
+from Colab.Envs.mountain_car import MountainCarEnv
 
 # from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 # from Colab.Agents.RandomDynaAgent import RandomDynaAgent
