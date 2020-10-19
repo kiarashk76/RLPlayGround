@@ -37,9 +37,9 @@ class BaseMCTSAgent(BaseAgent):
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
 
         self._vf = {'q': dict(network=None,
-                              layers_type=['fc', 'fc'],
-                              layers_features=[2, 2],
-                              action_layer_num=3,
+                              layers_type=['fc'],
+                              layers_features=[2],
+                              action_layer_num=2,
                               # if one more than layer numbers => we will have num of actions output
                               batch_size=10,
                               step_size=params['max_stepsize'] / 10,
