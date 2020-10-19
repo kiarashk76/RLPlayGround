@@ -2,8 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Colab.utils as utils, Colab.config as config
 
+with open("num_steps_run_list_basedyna2.npy", 'rb') as f:
+    num_steps = np.load(f)
+print(num_steps.shape)
 
+mean_num_steps = np.mean(num_steps, axis=1)
+var_num_steps = np.std(num_steps, axis=1)
+print(mean_num_steps.shape, var_num_steps.shape)
 
+ind = 1
+plt.plot(mean_num_steps[ind],'r', label='single model')
+plt.fill_between(range(len(mean_num_steps[ind])),
+                 mean_num_steps[ind] - var_num_steps[ind],
+                 mean_num_steps[ind] + var_num_steps[ind],
+                 facecolor='red', alpha=0.2, edgecolor='none')
+plt.show()
+exit(0)
 with open('multi.npy', 'rb') as f:
     err_multi = np.load(f)
 with open('single.npy', 'rb') as f:

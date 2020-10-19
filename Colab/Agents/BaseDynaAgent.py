@@ -35,6 +35,7 @@ class BaseDynaAgent(BaseAgent):
         self.transition_buffer_size = 100
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
+        self.dqn = True
 
         self._vf = {'q': dict(network=None,
                              layers_type=[],
@@ -240,7 +241,15 @@ class BaseDynaAgent(BaseAgent):
             if state is not None:  # Not a terminal State
                 assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
                 # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
-                target += self.gamma * self.getTargetValue(state, action)
+                if self.dqn :
+                    v_max = -np.inf
+                    for a in range(self.action_list):
+                        v = self.getTargetValue(state, a)
+                        if v_max < v:
+                            v_max = v
+                    target += self.gamma * v_max
+                else:
+                    target += self.gamma * self.getTargetValue(state, action)
             input = self.getStateActionValue(prev_state, prev_action, vf_type='q', gradient=True)
             assert target.shape == input.shape, 'target and input must have same shapes'
             loss = nn.MSELoss()(input, target)
@@ -353,29 +362,10 @@ class BaseDynaAgent(BaseAgent):
         :param action: numpy array
         :return value: int
         '''
-        if action is not None:
-            action_index = self.getActionIndex(action)
-            action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-
-            if self._target_vf['type'] == 'q':
-                if self._target_vf['layers_num'] + 1 == self._target_vf['action_layer_num']:
-                    value = self._target_vf['network'](state).detach()[:, action_index]
-                else:
-                    value = self._target_vf['network'](state, action_onehot).detach()[0]
-
-            elif self._target_vf['type'] == 's':
-                value = self._target_vf['network'][action_index](state).detach()[0]
-
-            else:
-                raise ValueError('state action value type is not defined')
-            return value
-        else:
-            # state value (no gradient)
-            sum = 0
-            for action in self.action_list:
+        with torch.no_grad():
+            if action is not None:
                 action_index = self.getActionIndex(action)
                 action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
-
                 if self._target_vf['type'] == 'q':
                     if self._target_vf['layers_num'] + 1 == self._target_vf['action_layer_num']:
                         value = self._target_vf['network'](state).detach()[:, action_index]
@@ -383,14 +373,33 @@ class BaseDynaAgent(BaseAgent):
                         value = self._target_vf['network'](state, action_onehot).detach()[0]
 
                 elif self._target_vf['type'] == 's':
-                    value = self._target_vf['network'][action_index](state).detach()
+                    value = self._target_vf['network'][action_index](state).detach()[0]
 
                 else:
                     raise ValueError('state action value type is not defined')
+                return value
 
-                sum += value
+            else:
+                # state value (no gradient)
+                sum = 0
+                for action in self.action_list:
+                    action_index = self.getActionIndex(action)
+                    action_onehot = torch.from_numpy(self.getActionOnehot(action)).float().unsqueeze(0).to(self.device)
 
-            return sum / len(self.action_list)
+                    if self._target_vf['type'] == 'q':
+                        if self._target_vf['layers_num'] + 1 == self._target_vf['action_layer_num']:
+                            value = self._target_vf['network'](state).detach()[:, action_index]
+                        else:
+                            value = self._target_vf['network'](state, action_onehot).detach()[0]
+
+                    elif self._target_vf['type'] == 's':
+                        value = self._target_vf['network'][action_index](state).detach()
+
+                    else:
+                        raise ValueError('state action value type is not defined')
+
+                    sum += value
+                return sum / len(self.action_list)
 
 # ***
     def getTransitionFromBuffer(self, n):
