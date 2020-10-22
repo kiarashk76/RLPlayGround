@@ -6,9 +6,9 @@ from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
-num_runs = 3
-num_episode = 200
-max_step_each_episode = 300
+num_runs = 1
+num_episode = 3000
+max_step_each_episode = 200
 
 # # environment
 # empty room parameters
@@ -27,8 +27,8 @@ empty_room_params = \
     }
 
 n_room_params = \
-    {'init_state': 'random' , 'state_mode': 'coord', #init_state (_n-1, 0)
-    'house_shape': (2,2), 'rooms_shape': (5,5),
+    {'init_state': 'random' , 'state_mode': 'one_hot', #init_state (_n-1, 0)
+    'house_shape': (2,2), 'rooms_shape': (3,3),
     'obstacles_pos': [],
     'rewards_value': [10],
     'termination_probs': [1],

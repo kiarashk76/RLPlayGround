@@ -230,9 +230,9 @@ class StateActionVFNN4(nn.Module): # last layer has number of actions' output
         else:
             # simple linear regression
             if self.action_layer_num == len(self.layers_type):
-                self.head = nn.Linear(state_shape[1] + num_actions, 1)
+                self.head = nn.Linear(state_shape[1] + num_actions, 1, bias=False)
             elif self.action_layer_num == len(self.layers_type) + 1:
-                self.head = nn.Linear(state_shape[1], num_actions)
+                self.head = nn.Linear(state_shape[1], num_actions, bias=False)
                 # nn.init.normal_(self.head.weight)
 
     def forward(self, state, action=None):

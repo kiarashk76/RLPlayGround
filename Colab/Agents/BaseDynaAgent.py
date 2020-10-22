@@ -32,17 +32,17 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 100
+        self.transition_buffer_size = 1000
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
         self.dqn = True
 
         self._vf = {'q': dict(network=None,
-                             layers_type=[],
-                             layers_features=[],
-                             action_layer_num=1,  # if one more than layer numbers => we will have num of actions output
-                             batch_size=16,
-                             step_size=params['max_stepsize'] / 16,
+                             layers_type=['fc','fc'],
+                             layers_features=[256,64],
+                             action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
+                             batch_size=32,
+                             step_size=params['max_stepsize'] / 32,
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
@@ -243,7 +243,7 @@ class BaseDynaAgent(BaseAgent):
                 # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
                 if self.dqn :
                     v_max = -np.inf
-                    for a in range(self.action_list):
+                    for a in self.action_list:
                         v = self.getTargetValue(state, a)
                         if v_max < v:
                             v_max = v

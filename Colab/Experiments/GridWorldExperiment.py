@@ -49,6 +49,7 @@ class GridWorldExperiment(BaseExperiment):
         self.num_samples += 1
         obs = self.observationChannel(s)
         self.total_reward += reward
+
         if self._render_on and self.num_episodes >= 0:
             # self.environment.render()
             self.environment.render(values=self.calculateValues())
@@ -74,7 +75,7 @@ class GridWorldExperiment(BaseExperiment):
         self.recordTrajectory(roat[1], roat[2], roat[0], roat[3])
         return roat
 
-    def runEpisode(self, max_steps=0, print_steps= False):
+    def runEpisode(self, max_steps=0, print_steps=True):
         is_terminal = False
         self.start()
 
@@ -330,7 +331,7 @@ class RunExperiment():
             pre_trained_plot_y_run_list = []
             pre_trained_plot_x_run_list = []
             for r in range(num_runs):
-                # print("starting runtime ", r+1)
+                print("starting runtime ", r+1)
                 # env = GridWorld(params=config.empty_room_params)
                 env = GridWorldRooms(params=config.n_room_params)
 
@@ -369,7 +370,7 @@ class RunExperiment():
                 experiment = GridWorldExperiment(agent, env, self.device)
 
                 for e in range(num_episode):
-                    # print("starting episode ", e + 1)
+                    print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
                     if agent.name != 'BaseDynaAgent':

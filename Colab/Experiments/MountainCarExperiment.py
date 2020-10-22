@@ -28,21 +28,36 @@ class MountainCarExperiment(BaseExperiment):
 
         self._render_on = params['render']
         self.num_steps_to_goal_list = []
+        self.end_state_list = []
+        self.total_return_list = []
         self.num_samples = 0
         self.device = device
 
+        self.visit_counts = {}
+
     def start(self):
         self.num_steps = 0
+        self.total_return = 0
         s = self.environment.reset()
         obs = self.observationChannel(s)
         self.last_action = self.agent.start(obs)
-        return (obs, self.last_action)
+        # if tuple(obs) not in self.visit_counts:
+        #     self.visit_counts[tuple(obs)] = 1
+        # else:
+        #     self.visit_counts[tuple(obs)] += 1
+        # return (obs, self.last_action)
 
     def step(self):
         (s, reward, term, _) = self.environment.step(self.last_action)
         self.num_samples += 1
         obs = self.observationChannel(s)
-        self.total_reward += reward
+
+        # if tuple(obs) not in self.visit_counts:
+        #     self.visit_counts[tuple(obs)] = 1
+        # else:
+        #     self.visit_counts[tuple(obs)] += 1
+
+        self.total_return += reward
         if self._render_on and self.num_episodes >= 0:
             self.environment.render()
         if term:
@@ -54,6 +69,7 @@ class MountainCarExperiment(BaseExperiment):
             roat = (reward, obs, self.last_action, term)
 
         self.recordTrajectory(roat[1], roat[2], roat[0], roat[3])
+        self.end_state = obs[0]
         return roat
 
     def runEpisode(self, max_steps=0):
@@ -66,11 +82,26 @@ class MountainCarExperiment(BaseExperiment):
 
         self.num_episodes += 1
         self.num_steps_to_goal_list.append(self.num_steps)
-        print("num steps: ", self.num_steps)
+        self.end_state_list.append(self.end_state)
+        self.total_return_list.append(self.total_return)
+        print("num steps: ", self.num_steps, "end state: ", self.end_state, "return: ", self.total_return)
+        # print(len(self.visit_counts), min(list(self.visit_counts.values())), max(list(self.visit_counts.values())))
         return is_terminal
 
     def observationChannel(self, s):
-        return np.asarray(s)
+        # print(s)
+        # bin1 = 50
+        # bin2 = 10
+        # s = np.asarray(s)
+        # s[0] = (s[0] - (-1.2)) / (0.6 - (-1.2))
+        # s[1] = (s[1] - (-0.07)) / (0.07 - (-0.07))
+        # ind1 = int(s[0] * bin1)
+        # ind2 = int(s[1] * bin2)
+        # obs = np.zeros(bin1+bin2)
+        # obs[ind1] = 1
+        # obs[bin1+ ind2] = 1
+        obs = np.asarray(s)
+        return obs
 
     def recordTrajectory(self, s, a, r, t):
         pass
@@ -89,7 +120,7 @@ class RunExperiment():
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
         self.num_steps_run_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
-
+        self.end_state_run_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
         for i, obj in enumerate(experiment_object_list):
             for r in range(num_runs):
                 print("starting runtime ", r + 1)
@@ -98,7 +129,7 @@ class RunExperiment():
                 # initializing the agent
                 agent = obj.agent_class({'action_list': np.asarray(range(env.action_space.n)),
                                          'gamma': 1.0,
-                                         'epsilon': 0.0,
+                                         'epsilon': 0.05,
                                          'max_stepsize': obj.vf_step_size,
                                          'model_stepsize': obj.model_step_size,
                                          'reward_function': None,
@@ -122,6 +153,9 @@ class RunExperiment():
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
+                    self.end_state_run_list[i, r, e] = experiment.end_state
+                    if e % 100 == 0:
+                        self.show_end_state_plot(e)
 
         with open('num_steps_run_list.npy', 'wb') as f:
             np.save(f, self.num_steps_run_list)
@@ -169,3 +203,8 @@ class RunExperiment():
 
             # plt.savefig('')
             plt.show()
+
+    def show_end_state_plot(self, ind):
+        mean = np.mean(self.end_state_run_list[0], axis=0)
+        plt.plot(mean[0:ind])
+        plt.show()

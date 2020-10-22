@@ -27,10 +27,13 @@ if __name__ == '__main__':
     show_values_grid = [False, False],
     show_model_error_grid = [False, False]
 
-    s_vf_list = [2 ** -6, 2 ** -7, 2 ** -8]
+    s_vf_list = [0.001]
     s_md_list = [2 ** -9]
-    c_list = [1.0]
 
+    c_list = [1.0]
+    num_iteration_list = [10]
+    simulation_depth_list = [1]
+    num_simulation_list = [1]
 
 
     # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]},
@@ -48,10 +51,19 @@ if __name__ == '__main__':
             for model in model_list:
                 for s_md in s_md_list:
                     for c in c_list:
-                        params = {'pre_trained': None, 'vf_step_size': s_vf, 'model': model, 'model_step_size': s_md, 'c': c}
-                        obj = ExperimentObject(agent_class, params)
-                        experiment_object_list.append(obj)
-
+                        for num_iteration in num_iteration_list:
+                            for simulation_depth in simulation_depth_list:
+                                for num_simulation in num_simulation_list:
+                                    params = {'pre_trained': None,
+                                              'vf_step_size': s_vf,
+                                              'model': model,
+                                              'model_step_size': s_md,
+                                              'c': c,
+                                              'num_iteration': num_iteration,
+                                              'simulation_depth': simulation_depth,
+                                              'num_simulation': num_simulation}
+                                    obj = ExperimentObject(agent_class, params)
+                                    experiment_object_list.append(obj)
 
     experiment.run_experiment(experiment_object_list)
 
