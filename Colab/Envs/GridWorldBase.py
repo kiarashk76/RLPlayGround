@@ -229,6 +229,7 @@ class GridWorld():
                     return termination
         else:
             raise ValueError('position for reward function is out of range')
+        return False
 
     def __transitionFunction(self, pos, action):
         if np.random.rand() < self._transition_randomness :
@@ -305,7 +306,7 @@ class GridWorld():
         return next_state
 
     def fullTransitionFunction(self, state, action, state_type='coord'):
-        pos = self.stateToPos(state, state_type)
+
         pos = self.stateToPos(state, state_type)
         pos = self.__transitionFunction(pos, action)
         is_terminal = self.__terminalFunction(pos)

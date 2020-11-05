@@ -7,8 +7,8 @@ from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
 num_runs = 1
-num_episode = 3000
-max_step_each_episode = 200
+num_episode = 50
+max_step_each_episode = 50
 
 # # environment
 # empty room parameters
@@ -16,21 +16,21 @@ _n = 4
 empty_room_params = \
     {'size': (_n, _n), 'init_state':(_n-1, 0), 'state_mode': 'coord', #init_state (_n-1, 0)
     'obstacles_pos': [],
-    'rewards_pos': [(0, _n-1)], 'rewards_value': [10],
+    'rewards_pos': [(0, _n-1)], 'rewards_value': [1000],
     'terminals_pos': [(0, _n-1)], 'termination_probs': [1],
     'actions': [(0, -1), (-1, 0), (0, 1) , (1, 0)], # L, U, R, D
     'neighbour_distance': 0,
     'agent_color': [0, 1, 0], 'ground_color': [0, 0, 0], 'obstacle_color': [1, 1, 1],
     'transition_randomness': 0.0,
     'window_size': (600, 600),
-    'aging_reward': -1,
+    'aging_reward': -10,
     }
 
 n_room_params = \
-    {'init_state': 'random' , 'state_mode': 'one_hot', #init_state (_n-1, 0)
+    {'init_state': 'random' , 'state_mode': 'coord', #init_state (_n-1, 0)
     'house_shape': (2,2), 'rooms_shape': (3,3),
     'obstacles_pos': [],
-    'rewards_value': [10],
+    'rewards_value': [1],
     'termination_probs': [1],
     'actions': [(0, -1), (-1, 0), (0, 1) , (1, 0)], # L, U, R, D
     'neighbour_distance': 0,

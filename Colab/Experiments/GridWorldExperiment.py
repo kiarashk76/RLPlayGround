@@ -51,8 +51,8 @@ class GridWorldExperiment(BaseExperiment):
         self.total_reward += reward
 
         if self._render_on and self.num_episodes >= 0:
-            # self.environment.render()
-            self.environment.render(values=self.calculateValues())
+            self.environment.render()
+            # self.environment.render(values=self.calculateValues())
             # self.environment.render (values= self.modelErrorCalculatedByAgent(self.agent.model_error))
             # self.environment.render(values= self.calculateModelError(self.agent.model['forward'],
             #                                                          self.environment.transitionFunction)[1])
@@ -359,7 +359,8 @@ class RunExperiment():
                                        'c': obj.c,
                                        'num_iteration': obj.num_iteration,
                                        'simulation_depth': obj.simulation_depth,
-                                       'num_simulation': obj.num_simulation})
+                                       'num_simulation': obj.num_simulation,})
+
                 model_type = obj.model['type']
                 if model_type is not None:
                     agent.model[model_type]['num_networks'] = obj.model['num_networks']
@@ -373,7 +374,7 @@ class RunExperiment():
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
-                    if agent.name != 'BaseDynaAgent':
+                    if agent.name != 'BaseDynaAgent' and agent.name != 'BaseMCTSAgent':
                         model_type = list(agent.model.keys())[0]
                         # agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
                         #                                     test,

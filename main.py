@@ -1,5 +1,6 @@
 from Colab.Experiments.GridWorldExperiment import RunExperiment as GridWorld_RunExperiment
 from Colab.Experiments.MountainCarExperiment import RunExperiment as MountainCar_RunExperiment
+from Colab.Experiments.CartPoleExperiment import RunExperiment as CartPole_RunExperiment
 
 from Colab.Agents.BaseDynaAgent import BaseDynaAgent
 from Colab.Agents.RandomDynaAgent import RandomDynaAgent
@@ -8,7 +9,8 @@ from Colab.Agents.RandomDynaAgent import RandomDynaAgent
 from Colab.Agents.TestAgent import BackwardDynaAgent, ForwardDynaAgent
 from Colab.Envs.GridWorldRooms import GridWorldRooms
 from Colab.Experiments.ExperimentObject import ExperimentObject
-from Colab.Agents.BaseMCTSAgent import BaseMCTSAgent
+# from Colab.Agents.BaseMCTSAgent import BaseMCTSAgent
+from Colab.Agents.MCTSAgent import BaseMCTSAgent
 from Colab.Agents.UCBMCSTAgent import UCBMCTSAgent
 
 
@@ -20,7 +22,7 @@ if __name__ == '__main__':
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
     # agent_class_list = [UCBMCTSAgent]
-    agent_class_list = [BaseDynaAgent]
+    agent_class_list = [BaseMCTSAgent]
 
 
     show_pre_trained_error_grid = [False, False],
@@ -43,7 +45,7 @@ if __name__ == '__main__':
 
     model_list = [{'type':None, 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]}]
 
-    experiment = MountainCar_RunExperiment()
+    experiment = GridWorld_RunExperiment()
 
     experiment_object_list = []
     for agent_class in agent_class_list:

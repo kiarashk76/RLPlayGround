@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
+import torch.nn.functional as F
+
 import torch.optim as optim
 from abc import abstractmethod
 import random
@@ -13,6 +15,20 @@ from Colab.Networks.ValueFunctionNN.StateActionValueFunction import StateActionV
 from Colab.Networks.ValueFunctionNN.StateValueFunction import StateVFNN
 from Colab.Networks.RepresentationNN.StateRepresentation import StateRepresentation
 
+
+def compare_models(model_1, model_2):
+    models_differ = 0
+    for key_item_1, key_item_2 in zip(model_1.state_dict().items(), model_2.state_dict().items()):
+        if torch.equal(key_item_1[1], key_item_2[1]):
+            pass
+        else:
+            models_differ += 1
+            if (key_item_1[0] == key_item_2[0]):
+                print('Mismtach found at', key_item_1[0])
+            else:
+                raise Exception
+    if models_differ == 0:
+        print('Models match perfectly! :)')
 
 class BaseDynaAgent(BaseAgent):
     name = 'BaseDynaAgent'
@@ -32,17 +48,17 @@ class BaseDynaAgent(BaseAgent):
         self.epsilon = params['epsilon']
 
         self.transition_buffer = []
-        self.transition_buffer_size = 1000
+        self.transition_buffer_size = 4096
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
         self.dqn = True
 
         self._vf = {'q': dict(network=None,
                              layers_type=['fc','fc'],
-                             layers_features=[256,64],
+                             layers_features=[64,64],
                              action_layer_num=3,  # if one more than layer numbers => we will have num of actions output
                              batch_size=32,
-                             step_size=params['max_stepsize'] / 32,
+                             step_size=params['max_stepsize'],
                              training=True),
                    's': dict(network=None,
                              layers_type=['fc'],
@@ -63,7 +79,7 @@ class BaseDynaAgent(BaseAgent):
                               counter=0,
                               layers_num=None,
                               action_layer_num=None,
-                              update_rate=10,
+                              update_rate=200,
                               type=None)
 
         self.reward_function = params['reward_function']
@@ -100,12 +116,13 @@ class BaseDynaAgent(BaseAgent):
 
         self.state = self.getStateRepresentation(observation)
 
-        reward = torch.tensor(reward).unsqueeze(0).to(self.device)
+        reward = torch.tensor([reward], device=self.device)
         self.action = self.policy(self.state)
 
         #store the new transition in buffer
-        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     self.state, self.action, False, self.time_step, 0))
+        self.updateTransitionBuffer(utils.transition(self.prev_state,
+                                                     torch.tensor([[self.getActionIndex(self.prev_action)]], device=self.device)
+                                                     , reward, self.state, self.action, False, self.time_step, 0))
         #update target
         if self._target_vf['counter'] >= self._target_vf['update_rate']:
             self.setTargetValueFunction(self._vf['q'], 'q')
@@ -116,6 +133,7 @@ class BaseDynaAgent(BaseAgent):
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
                 transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
+
                 self.updateValueFunction(transition_batch, 'q')
         if self._vf['s']['training']:
             if len(self.transition_buffer) >= self._vf['s']['batch_size']:
@@ -134,8 +152,9 @@ class BaseDynaAgent(BaseAgent):
     def end(self, reward):
         reward = torch.tensor(reward).unsqueeze(0).to(self.device)
 
-        self.updateTransitionBuffer(utils.transition(self.prev_state, self.prev_action, reward,
-                                                     None, None, True, self.time_step, 0))
+        self.updateTransitionBuffer(utils.transition(self.prev_state,
+                                                     torch.tensor([[self.getActionIndex(self.prev_action)]], device=self.device)
+                                                     , reward, None, None, True, self.time_step, 0))
 
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
@@ -178,7 +197,8 @@ class BaseDynaAgent(BaseAgent):
 # ***
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
-        optimizer = optim.SGD(network.parameters(), lr=step_size)
+        # optimizer = optim.SGD(network.parameters(), lr=step_size)
+        optimizer = optim.Adam(network.parameters(), lr=0.001)
         optimizer.step()
         optimizer.zero_grad()
 
@@ -222,49 +242,31 @@ class BaseDynaAgent(BaseAgent):
 
 # ***
     def updateValueFunction(self, transition_batch, vf_type):
-        for i, data in enumerate(transition_batch):
-            prev_state, prev_action, reward, state, action, _, t, error = data
-            self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
-        # print(np.nonzero(self._vf[vf_type]['network'].head.weight.grad),
-        #       np.nonzero(prev_state)[0][1], self.getActionIndex(prev_action))
-        # print(np.nonzero(self._vf[vf_type]['network'].head.bias.grad))
+        batch = utils.transition(*zip(*transition_batch))
 
-        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'] * np.exp(-error))
+        non_final_mask = torch.tensor(
+            tuple(map(lambda s: s is not None,
+                      batch.state)), device=self.device, dtype=torch.bool)
+        non_final_next_states = torch.cat([s for s in batch.state
+                                           if s is not None])
+        prev_state_batch = torch.cat(batch.prev_state)
+        prev_action_batch_index = torch.cat(batch.prev_action)
+        reward_batch = torch.cat(batch.reward)
+
+        state_action_values = self._vf['q']['network'](prev_state_batch).gather(1, prev_action_batch_index)
+        next_state_values = torch.zeros(self._vf['q']['batch_size'], device=self.device)
+        next_state_values[non_final_mask] = self._target_vf['network'](non_final_next_states).max(1)[0].detach()
+
+        expected_state_action_values = (next_state_values * self.gamma) + reward_batch
+        loss = F.mse_loss(state_action_values,
+                          expected_state_action_values.unsqueeze(1))
+        loss.backward()
+        # for i, data in enumerate(transition_batch):
+        #     prev_state, prev_action, reward, state, action, _, t, error = data
+        #     self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
+
+        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'])
         self._target_vf['counter'] += 1
-
-    def calculateGradientValueFunction(self, vf_type, reward, prev_state, prev_action, state=None, action=None):
-        if prev_action is None:
-            raise ValueError('previous action not given')
-        prev_action_index = self.getActionIndex(prev_action)
-        if vf_type == 'q':
-            target = reward.float()
-            if state is not None:  # Not a terminal State
-                assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='q')
-                if self.dqn :
-                    v_max = -np.inf
-                    for a in self.action_list:
-                        v = self.getTargetValue(state, a)
-                        if v_max < v:
-                            v_max = v
-                    target += self.gamma * v_max
-                else:
-                    target += self.gamma * self.getTargetValue(state, action)
-            input = self.getStateActionValue(prev_state, prev_action, vf_type='q', gradient=True)
-            assert target.shape == input.shape, 'target and input must have same shapes'
-            loss = nn.MSELoss()(input, target)
-            loss.backward()
-
-        if vf_type == 's':
-            target = reward.float()
-            if state is not None:  # Not a terminal State
-                assert prev_state.shape == state.shape, 'x_old and x_new have different shapes'
-                # target += self.gamma * self.getStateActionValue(state, action, gradient=False, type='s')
-                target += self.gamma * self.getTargetValue(state, action)
-            input = self.getStateActionValue(prev_state, prev_action, vf_type='s', gradient=True)
-            assert target.shape == input.shape, 'target and input must have same shapes'
-            loss = nn.MSELoss()(input, target)
-            loss.backward()
 
     def getStateActionValue(self, state, action=None, vf_type='q', gradient=False):
         '''
@@ -328,7 +330,11 @@ class BaseDynaAgent(BaseAgent):
         if gradient:
             self._sr['batch_counter'] += 1
         observation = torch.from_numpy(observation).unsqueeze(0).to(self.device)
-        rep = self._sr['network'](observation).detach() if not gradient else self._sr['network'](observation)
+        if gradient:
+            rep = self._sr['network'](observation)
+        else:
+            with torch.no_grad():
+                rep = self._sr['network'](observation)
         return rep
 
     def updateStateRepresentation(self):
@@ -406,7 +412,7 @@ class BaseDynaAgent(BaseAgent):
         # both model and value function are using this buffer
         if len(self.transition_buffer) < n:
             n = len(self.transition_buffer)
-        return random.choices(self.transition_buffer, k=n)
+        return random.sample(self.transition_buffer, k=n)
 
     def updateTransitionBuffer(self, transition):
         self.transition_buffer.append(transition)
