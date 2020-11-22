@@ -31,9 +31,10 @@ class BaseMCTSAgent:
 
 
         # MCTS parameters
-        self.C = 2**0.5
-        self.num_iterations = 50
-        self.num_rollouts = 500
+        self.C = params['c']
+        self.num_iterations = params['num_iteration']
+        self.num_rollouts = params['num_simulation']
+        self.rollout_depth = params['simulation_depth']
         self.keep_tree = False
 
     def start(self, observation):
@@ -100,13 +101,13 @@ class BaseMCTSAgent:
             child = Node(node, next_state, is_terminal=is_terminal, action_from_par=a, reward_from_par = reward)
             node.add_child(child)
 
-    def rollout(self, node, max_depth=1000):
+    def rollout(self, node):
         is_terminal = False
         state = node.get_state()
         returns = np.zeros([self.num_rollouts])
         for i in range(self.num_rollouts):
             depth = 0
-            while not is_terminal: #and depth < max_depth:
+            while not is_terminal and depth < self.rollout_depth:
                 a = random.choice(self.action_list)
                 next_state, is_terminal, reward = self.true_model(state, a)
                 returns[i] += reward

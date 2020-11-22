@@ -1,3 +1,9 @@
+'''
+train a DQN with MCTS
+See if DQN agrees with DQN (saving the best path)
+At what step DQN starts to work with MCTS
+'''
+
 from Colab.Experiments.GridWorldExperiment import RunExperiment as GridWorld_RunExperiment
 from Colab.Experiments.MountainCarExperiment import RunExperiment as MountainCar_RunExperiment
 from Colab.Experiments.CartPoleExperiment import RunExperiment as CartPole_RunExperiment
@@ -32,10 +38,10 @@ if __name__ == '__main__':
     s_vf_list = [0.001]
     s_md_list = [2 ** -9]
 
-    c_list = [1.0]
+    c_list = [2**0.5]
     num_iteration_list = [10]
-    simulation_depth_list = [1]
-    num_simulation_list = [1]
+    simulation_depth_list = [100]
+    num_simulation_list = [5]
 
 
     # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]},
