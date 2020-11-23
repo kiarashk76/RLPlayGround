@@ -4,10 +4,11 @@ import numpy as np
 from abc import abstractmethod
 import random
 from torch.utils.tensorboard import SummaryWriter
-
+from ete3 import Tree
 import Colab.utils as utils
 from Colab.Agents.BaseAgent import BaseAgent
 
+from ete3 import Tree, TreeStyle, TextFace, add_face_to_node
 
 
 class BaseMCTSAgent:
@@ -52,6 +53,7 @@ class BaseMCTSAgent:
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
         self.root_node = sub_tree
+        self.render_tree()
         return a
 
     def end(self, reward):
@@ -133,6 +135,28 @@ class BaseMCTSAgent:
                 queue.append(child)
             if len(node.get_childs()) > 0:
                 queue.append("*")
+
+    def render_tree(self):
+        def my_layout(node):
+            F = TextFace(node.name, tight_text=True)
+            add_face_to_node(F, node, column=0, position="branch-right")
+        t = Tree()
+        ts = TreeStyle()
+        ts.show_leaf_name = False
+        queue = [(self.root_node, None)]
+        while queue:
+            node, parent = queue.pop(0)
+            if parent is None:
+                p = t.add_child(name=str(node.get_state())+str(node.num_visits))
+            else:
+                p = parent.add_child(name=str(node.get_state()) + str(node.num_visits))
+            for child in node.get_childs():
+                queue.append((child, p))
+
+        ts.layout_fn = my_layout
+        # t.render('t.png', tree_style=ts)
+        print(t.get_ascii(show_internal=Tree))
+        # t.show(tree_style=ts)
 
 
 # class MCTS():

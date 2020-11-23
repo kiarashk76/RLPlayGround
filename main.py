@@ -39,9 +39,9 @@ if __name__ == '__main__':
     s_md_list = [2 ** -9]
 
     c_list = [2**0.5]
-    num_iteration_list = [10]
-    simulation_depth_list = [100]
-    num_simulation_list = [5]
+    num_iteration_list = [50]
+    simulation_depth_list = [50]
+    num_simulation_list = [1]
 
 
     # model_list = [{'type':'forward', 'num_networks':1, 'layers_type':['fc'], 'layers_features':[128]},
