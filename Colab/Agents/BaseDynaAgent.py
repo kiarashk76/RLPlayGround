@@ -51,7 +51,6 @@ class BaseDynaAgent(BaseAgent):
         self.transition_buffer_size = 4096
 
         self.policy_values = 'q'  # 'q' or 's' or 'qs'
-        self.dqn = True
 
         self._vf = {'q': dict(network=None,
                              layers_type=['fc','fc'],
@@ -79,7 +78,7 @@ class BaseDynaAgent(BaseAgent):
                               counter=0,
                               layers_num=None,
                               action_layer_num=None,
-                              update_rate=200,
+                              update_rate=500,
                               type=None)
 
         self.reward_function = params['reward_function']
@@ -99,14 +98,12 @@ class BaseDynaAgent(BaseAgent):
 
         if self._vf['q']['network'] is None and self._vf['q']['training']:
             self.init_q_value_function_network(self.prev_state)  # a general state action VF for all actions
+            self.optimizer = optim.Adam(self._vf['q']['network'].parameters(), lr=0.001)
         if self._vf['s']['network'] is None and self._vf['s']['training']:
             self.init_s_value_function_network(self.prev_state)  # a separate state VF for each action
-        if self._target_vf['network'] is None:
-            self.setTargetValueFunction(self._vf['q'], 'q')
 
-
+        self.setTargetValueFunction(self._vf['q'], 'q')
         self.prev_action = self.policy(self.prev_state)
-
         self.initModel(self.prev_state)
 
         return self.prev_action
@@ -198,9 +195,8 @@ class BaseDynaAgent(BaseAgent):
     def updateNetworkWeights(self, network, step_size):
         # another option: ** can use a optimizer here later**
         # optimizer = optim.SGD(network.parameters(), lr=step_size)
-        optimizer = optim.Adam(network.parameters(), lr=0.001)
-        optimizer.step()
-        optimizer.zero_grad()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
 
         # for f in network.parameters():
         #     f.data.sub_(step_size * f.grad.data)

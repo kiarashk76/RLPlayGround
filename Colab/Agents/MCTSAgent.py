@@ -147,9 +147,9 @@ class BaseMCTSAgent:
         while queue:
             node, parent = queue.pop(0)
             if parent is None:
-                p = t.add_child(name=str(node.get_state())+str(node.num_visits))
+                p = t.add_child(name=str(node.get_state())+","+str(node.num_visits)+","+str(node.get_avg_value()))
             else:
-                p = parent.add_child(name=str(node.get_state()) + str(node.num_visits))
+                p = parent.add_child(name=str(node.get_state()) +","+ str(node.num_visits)+","+ str(node.get_avg_value()))
             for child in node.get_childs():
                 queue.append((child, p))
 

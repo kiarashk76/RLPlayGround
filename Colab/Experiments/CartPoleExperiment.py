@@ -129,7 +129,7 @@ class RunExperiment():
                 # initializing the agent
                 agent = obj.agent_class({'action_list': np.asarray(range(env.action_space.n)),
                                          'gamma': 0.99,
-                                         'epsilon': 0.05,
+                                         'epsilon': 0.1,
                                          'max_stepsize': obj.vf_step_size,
                                          'model_stepsize': obj.model_step_size,
                                          'reward_function': None,

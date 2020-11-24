@@ -7,8 +7,8 @@ from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
 num_runs = 1
-num_episode = 50
-max_step_each_episode = 50
+num_episode = 500
+max_step_each_episode = 500
 
 # # environment
 # empty room parameters
