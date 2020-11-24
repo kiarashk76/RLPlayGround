@@ -39,12 +39,14 @@ class BaseMCTSAgent:
         self.keep_tree = False
 
     def start(self, observation):
+
         self.root_node = Node(None, observation)
         self.expansion(self.root_node)
 
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
         self.root_node = sub_tree
+
         return a
 
     def step(self, reward, observation):
@@ -53,7 +55,7 @@ class BaseMCTSAgent:
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
         self.root_node = sub_tree
-        self.render_tree()
+        # self.render_tree()
         return a
 
     def end(self, reward):
@@ -85,6 +87,10 @@ class BaseMCTSAgent:
         selected_node = self.root_node
         while len(selected_node.get_childs()) > 0:
             max_uct_value = -np.inf
+            child_values = list(map(lambda n: n.get_avg_value(), selected_node.get_childs()))
+            max_child_value = max(child_values)
+            min_child_value = min(child_values)
+
             for child in selected_node.get_childs():
                 if child.num_visits > 0:
                     uct_value = child.get_avg_value() + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
