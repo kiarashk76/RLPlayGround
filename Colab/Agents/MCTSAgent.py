@@ -94,7 +94,7 @@ class BaseMCTSAgent:
             for child in selected_node.get_childs():
                 if child.num_visits > 0:
                     try:
-                        child_value = (child.get_avg_value() - min_child_value) - (max_child_value - min_child_value)
+                        child_value = (child.get_avg_value() - min_child_value) / (max_child_value - min_child_value)
                     except:
                         child_value = child.get_avg_value()
                     uct_value = child_value + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
@@ -157,10 +157,11 @@ class BaseMCTSAgent:
         queue = [(self.root_node, None)]
         while queue:
             node, parent = queue.pop(0)
+            node_face = str(node.get_state())+","+str(node.num_visits)+","+str(node.get_avg_value())
             if parent is None:
-                p = t.add_child(name=str(node.get_state())+","+str(node.num_visits)+","+str(node.get_avg_value()))
+                p = t.add_child(name=node_face)
             else:
-                p = parent.add_child(name=str(node.get_state()) +","+ str(node.num_visits)+","+ str(node.get_avg_value()))
+                p = parent.add_child(name=node_face)
             for child in node.get_childs():
                 queue.append((child, p))
 
