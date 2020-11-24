@@ -93,7 +93,12 @@ class BaseMCTSAgent:
 
             for child in selected_node.get_childs():
                 if child.num_visits > 0:
-                    uct_value = child.get_avg_value() + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
+                    try:
+                        child_value = (child.get_avg_value() - min_child_value) - (max_child_value - min_child_value)
+                    except:
+                        child_value = child.get_avg_value()
+                    uct_value = child_value + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
+
                 else:
                     uct_value = np.inf
                 if max_uct_value < uct_value:
