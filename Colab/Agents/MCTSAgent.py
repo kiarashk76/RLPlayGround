@@ -88,22 +88,21 @@ class BaseMCTSAgent:
         while len(selected_node.get_childs()) > 0:
             max_uct_value = -np.inf
             child_values = list(map(lambda n: n.get_avg_value(), selected_node.get_childs()))
+            print(child_values)
             max_child_value = max(child_values)
             min_child_value = min(child_values)
-
             for child in selected_node.get_childs():
                 if child.num_visits > 0:
-                    try:
+                    child_value = child.get_avg_value()
+                    if min_child_value != np.inf and max_child_value != np.inf and min_child_value != max_child_value:
                         child_value = (child.get_avg_value() - min_child_value) / (max_child_value - min_child_value)
-                    except:
-                        child_value = child.get_avg_value()
                     uct_value = child_value + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
-
                 else:
                     uct_value = np.inf
                 if max_uct_value < uct_value:
                     max_uct_value = uct_value
                     selected_node = child
+
         return selected_node
 
     def expansion(self, node):
