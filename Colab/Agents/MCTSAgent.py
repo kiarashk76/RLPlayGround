@@ -55,13 +55,14 @@ class BaseMCTSAgent:
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
         self.root_node = sub_tree
-        # self.render_tree()
+
         return a
 
     def end(self, reward):
         pass
 
     def MCTS_iteration(self):
+        self.render_tree()
         selected_node = self.selection()
         #now we decide to expand the leaf or rollout
         if selected_node.num_visits == 0: # don't expand just roll-out
@@ -88,7 +89,6 @@ class BaseMCTSAgent:
         while len(selected_node.get_childs()) > 0:
             max_uct_value = -np.inf
             child_values = list(map(lambda n: n.get_avg_value(), selected_node.get_childs()))
-            print(child_values)
             max_child_value = max(child_values)
             min_child_value = min(child_values)
             for child in selected_node.get_childs():
@@ -166,8 +166,8 @@ class BaseMCTSAgent:
 
         ts.layout_fn = my_layout
         # t.render('t.png', tree_style=ts)
-        print(t.get_ascii(show_internal=Tree))
-        # t.show(tree_style=ts)
+        # print(t.get_ascii(show_internal=Tree))
+        t.show(tree_style=ts)
 
 
 # class MCTS():
@@ -268,6 +268,7 @@ class Node():
 
     def get_action_from_par(self):
         return np.copy(self.action_from_par)
+
     def add_child(self, child):
         self.childs_list.append(child)
 

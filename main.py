@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
     # agent_class_list = [UCBMCTSAgent]
-    agent_class_list = [BaseMCTSAgent]
+    agent_class_list = [BaseDynaAgent]
 
 
     show_pre_trained_error_grid = [False, False],
@@ -39,8 +39,8 @@ if __name__ == '__main__':
     s_md_list = [2 ** -9]
 
     c_list = [2**0.5]
-    num_iteration_list = [50]
-    simulation_depth_list = [50]
+    num_iteration_list = [100]
+    simulation_depth_list = [200]
     num_simulation_list = [1]
 
 

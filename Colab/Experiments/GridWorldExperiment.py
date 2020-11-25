@@ -374,6 +374,10 @@ class RunExperiment():
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
+                    if e % 100 == 0:
+                        mean = np.mean(self.num_steps_run_list[0], axis=0)
+                        plt.plot(mean[0:e])
+                        plt.show()
                     if agent.name != 'BaseDynaAgent' and agent.name != 'BaseMCTSAgent':
                         model_type = list(agent.model.keys())[0]
                         # agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
@@ -388,6 +392,7 @@ class RunExperiment():
                         self.model_error_list[i, r, e] = model_error
                         # self.agent_model_error_list[agent_counter, r, e] = agent_model_error
                         self.model_error_samples[i, r, e] = experiment.num_samples
+
 
                 # *********
                 # model_type = list(agent.model.keys())[0]
