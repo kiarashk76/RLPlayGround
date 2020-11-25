@@ -374,6 +374,7 @@ class RunExperiment():
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
+                    print('consistency: ', agent.action_consistency / agent.time_step)
                     if e % 100 == 0:
                         mean = np.mean(self.num_steps_run_list[0], axis=0)
                         plt.plot(mean[0:e])

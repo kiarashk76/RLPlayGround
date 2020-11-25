@@ -1,15 +1,10 @@
-import copy
 import numpy as np
-
-from abc import abstractmethod
 import random
 from torch.utils.tensorboard import SummaryWriter
-from ete3 import Tree
-import Colab.utils as utils
-from Colab.Agents.BaseAgent import BaseAgent
-
 from ete3 import Tree, TreeStyle, TextFace, add_face_to_node
 
+import Colab.utils as utils
+from Colab.Agents.BaseAgent import BaseAgent
 
 class BaseMCTSAgent:
     name = "BaseMCTSAgent"
@@ -29,7 +24,6 @@ class BaseMCTSAgent:
 
         self.device = params['device']
         self.true_model = params['true_fw_model']
-
 
         # MCTS parameters
         self.C = params['c']
@@ -55,14 +49,13 @@ class BaseMCTSAgent:
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
         self.root_node = sub_tree
-
         return a
 
     def end(self, reward):
         pass
 
     def MCTS_iteration(self):
-        self.render_tree()
+        # self.render_tree()
         selected_node = self.selection()
         #now we decide to expand the leaf or rollout
         if selected_node.num_visits == 0: # don't expand just roll-out

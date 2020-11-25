@@ -18,6 +18,7 @@ from Colab.Experiments.ExperimentObject import ExperimentObject
 # from Colab.Agents.BaseMCTSAgent import BaseMCTSAgent
 from Colab.Agents.MCTSAgent import BaseMCTSAgent
 from Colab.Agents.UCBMCSTAgent import UCBMCTSAgent
+from Colab.Agents.DQNMCTSAgent import DQNMCTSAgent
 
 
 if __name__ == '__main__':
@@ -28,7 +29,9 @@ if __name__ == '__main__':
     # s_md = [2 ** -5, 2 ** -10, 2 ** -9]
 
     # agent_class_list = [UCBMCTSAgent]
-    agent_class_list = [BaseDynaAgent]
+    # agent_class_list = [BaseDynaAgent]
+    agent_class_list = [DQNMCTSAgent]
+
 
 
     show_pre_trained_error_grid = [False, False],

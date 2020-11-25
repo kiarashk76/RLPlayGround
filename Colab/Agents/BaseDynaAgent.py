@@ -140,6 +140,9 @@ class BaseDynaAgent(BaseAgent):
         self.trainModel()
         self.plan()
 
+        self.updateStateRepresentation()
+
+
         self.prev_state = self.getStateRepresentation(observation)
         self.prev_action = self.action  # another option:** we can again call self.policy function **
 
@@ -169,7 +172,7 @@ class BaseDynaAgent(BaseAgent):
     def policy(self, state):
         '''
         :param state: torch -> (1, state_shape)
-        :return: action: numpy array
+        :return: action: index torch
         '''
 
         if random.random() < self.epsilon:
