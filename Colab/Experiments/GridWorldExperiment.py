@@ -373,8 +373,9 @@ class RunExperiment():
                 for e in range(num_episode):
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
+                    dqn_num_step = self.simulate_dqn(agent.policy, agent.true_model, env.start(), env.getAllActions())
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
-                    print('consistency: ', agent.action_consistency / agent.time_step)
+                    print('consistency: ', agent.action_consistency / agent.time_step, "dqn steps:", dqn_num_step)
                     if e % 100 == 0:
                         mean = np.mean(self.num_steps_run_list[0], axis=0)
                         plt.plot(mean[0:e])
@@ -552,6 +553,21 @@ class RunExperiment():
                 utils.draw_plot(range(len(self.model_error_samples[a, r])), self.agent_model_error_list[a, r],
                                 xlabel='num_samples', ylabel='agent_model_error', show=True,
                                 label=agent_name, title='run_number ' + str(r + 1))
+
+    def simulate_dqn(self, policy, model, init_state, action_list):
+        num_steps = 0
+        is_terminal = False
+        state = init_state
+        while num_steps < config.max_step_each_episode and not is_terminal:
+            num_steps += 1
+            torch_state = torch.from_numpy(state).unsqueeze(0).to(self.device)
+            action_ind = policy(torch_state).item()
+            action = action_list[action_ind]
+            next_state, is_terminal, reward = model(state, action)
+            state = next_state
+        return num_steps
+
+
     #
     # def calculate_model_error(self):
     #     if self.model_type[i] == 'forward':
