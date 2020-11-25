@@ -33,7 +33,6 @@ class BaseMCTSAgent:
         self.keep_tree = False
 
     def start(self, observation):
-
         self.root_node = Node(None, observation)
         self.expansion(self.root_node)
 

@@ -379,7 +379,7 @@ class RunExperiment():
                         mean = np.mean(self.num_steps_run_list[0], axis=0)
                         plt.plot(mean[0:e])
                         plt.show()
-                    if agent.name != 'BaseDynaAgent' and agent.name != 'BaseMCTSAgent':
+                    if agent.name != 'BaseDynaAgent' and agent.name != 'BaseMCTSAgent' and agent.name != 'DQNMCTSAgent':
                         model_type = list(agent.model.keys())[0]
                         # agent_model_error = experiment.calculateModelErrorError(agent.model[model_type],
                         #                                     test,

@@ -91,6 +91,7 @@ class BaseDynaAgent(BaseAgent):
         :param observation: numpy array -> (observation shape)
         :return: action : numpy array
         '''
+
         if self._sr['network'] is None:
             self.init_s_representation_network(observation)
 

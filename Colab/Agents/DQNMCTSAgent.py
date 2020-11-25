@@ -35,8 +35,8 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
         self.action_consistency = 0
 
     def start(self, observation):
-        action = BaseMCTSAgent.start(self, observation)
         BaseDynaAgent.start(self, observation)
+        action = BaseMCTSAgent.start(self, observation)
         return action
 
     def step(self, reward, observation):
@@ -78,16 +78,13 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
                 self.updateValueFunction(transition_batch, 's')
 
     def expansion(self, node):
-        print('child expansion')
         for a in self.action_list:
             state = node.get_state()
-            print(state)
             next_state, is_terminal, reward = self.true_model(state, a)  # with the assumption of deterministic model
             torch_state = self.getStateRepresentation(state)
             torch_next_state = self.getStateRepresentation(next_state)
             torch_reward = torch.tensor([reward], device=self.device)
-            torch_action = torch.tensor([self.getActionIndex(a)], device=self.device)
-            print(torch_action.shape)
+            torch_action = torch.tensor([self.getActionIndex(a)], device=self.device).view(1,1)
             transition = utils.transition(torch_state,
                              torch_action,
                              torch_reward,
