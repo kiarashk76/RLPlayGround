@@ -95,10 +95,9 @@ class BaseDynaAgent(BaseAgent):
             self.init_s_representation_network(observation)
 
         self.prev_state = self.getStateRepresentation(observation)
-
         if self._vf['q']['network'] is None and self._vf['q']['training']:
             self.init_q_value_function_network(self.prev_state)  # a general state action VF for all actions
-            self.optimizer = optim.Adam(self._vf['q']['network'].parameters(), lr=0.001)
+
         if self._vf['s']['network'] is None and self._vf['s']['training']:
             self.init_s_value_function_network(self.prev_state)  # a separate state VF for each action
 
@@ -106,7 +105,7 @@ class BaseDynaAgent(BaseAgent):
         self.prev_action = self.policy(self.prev_state)
         self.initModel(self.prev_state)
 
-        return self.prev_action
+        return self.action_list[self.prev_action.item()]
 
     def step(self, reward, observation):
         self.time_step += 1
@@ -118,19 +117,19 @@ class BaseDynaAgent(BaseAgent):
 
         #store the new transition in buffer
         self.updateTransitionBuffer(utils.transition(self.prev_state,
-                                                     torch.tensor([[self.getActionIndex(self.prev_action)]], device=self.device)
-                                                     , reward, self.state, self.action, False, self.time_step, 0))
+                                                     self.prev_action,
+                                                     reward,
+                                                     self.state,
+                                                     self.action, False, self.time_step, 0))
         #update target
         if self._target_vf['counter'] >= self._target_vf['update_rate']:
             self.setTargetValueFunction(self._vf['q'], 'q')
             # self.setTargetValueFunction(self._vf['s'], 's')
-            self._target_vf['counter'] = 0
 
         #update value function with the buffer
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
                 transition_batch = self.getTransitionFromBuffer(n=self._vf['q']['batch_size'])
-
                 self.updateValueFunction(transition_batch, 'q')
         if self._vf['s']['training']:
             if len(self.transition_buffer) >= self._vf['s']['batch_size']:
@@ -144,14 +143,16 @@ class BaseDynaAgent(BaseAgent):
         self.prev_state = self.getStateRepresentation(observation)
         self.prev_action = self.action  # another option:** we can again call self.policy function **
 
-        return self.prev_action
+        return self.action_list[self.prev_action.item()]
 
     def end(self, reward):
-        reward = torch.tensor(reward).unsqueeze(0).to(self.device)
+        reward = torch.tensor([reward], device=self.device)
 
         self.updateTransitionBuffer(utils.transition(self.prev_state,
-                                                     torch.tensor([[self.getActionIndex(self.prev_action)]], device=self.device)
-                                                     , reward, None, None, True, self.time_step, 0))
+                                                     self.prev_action,
+                                                     reward,
+                                                     None,
+                                                     None, True, self.time_step, 0))
 
         if self._vf['q']['training']:
             if len(self.transition_buffer) >= self._vf['q']['batch_size']:
@@ -170,37 +171,19 @@ class BaseDynaAgent(BaseAgent):
         :param state: torch -> (1, state_shape)
         :return: action: numpy array
         '''
+
+        if random.random() < self.epsilon:
+            ind = torch.tensor([[random.randrange(self.num_actions)]],
+                            device=self.device, dtype=torch.long)
+            return ind
         with torch.no_grad():
-            if np.random.rand() <= self.epsilon:
-                ind = int(np.random.rand() * self.num_actions)
-                return self.action_list[ind]
             v = []
-            for i, action in enumerate(self.action_list):
-                if self.policy_values == 'q':
-                    v.append(self.getStateActionValue(state, action, vf_type='q'))
-                elif self.policy_values == 's':
-                    v.append(self.getStateActionValue(state, vf_type='s'))
+            if self.policy_values == 'q':
+                ind = self._vf['q']['network'](state).max(1)[1].view(1,1)
+                return ind
+            else:
+                raise ValueError('policy is not defined')
 
-                elif self.policy_values == 'qs':
-                    q = self.getStateActionValue(state, action, vf_type='q')
-                    s = self.getStateActionValue(state, vf_type='s')
-                    v.append((q + s) / 2)
-                else:
-                    raise ValueError('policy is not defined')
-            ind = np.argmax(v)
-            return self.action_list[ind]
-
-
-# ***
-    def updateNetworkWeights(self, network, step_size):
-        # another option: ** can use a optimizer here later**
-        # optimizer = optim.SGD(network.parameters(), lr=step_size)
-        self.optimizer.step()
-        self.optimizer.zero_grad()
-
-        # for f in network.parameters():
-        #     f.data.sub_(step_size * f.grad.data)
-        # network.zero_grad()
 
 # ***
     def init_q_value_function_network(self, state):
@@ -213,6 +196,8 @@ class BaseDynaAgent(BaseAgent):
                                                    self._vf['q']['layers_type'],
                                                    self._vf['q']['layers_features'],
                                                    self._vf['q']['action_layer_num']).to(self.device)
+
+        self.optimizer = optim.Adam(self._vf['q']['network'].parameters(), lr= self._vf['q']['step_size'])
 
     def init_s_value_function_network(self, state):
         '''
@@ -246,22 +231,21 @@ class BaseDynaAgent(BaseAgent):
         non_final_next_states = torch.cat([s for s in batch.state
                                            if s is not None])
         prev_state_batch = torch.cat(batch.prev_state)
-        prev_action_batch_index = torch.cat(batch.prev_action)
+        prev_action_batch = torch.cat(batch.prev_action)
         reward_batch = torch.cat(batch.reward)
 
-        state_action_values = self._vf['q']['network'](prev_state_batch).gather(1, prev_action_batch_index)
+        state_action_values = self._vf['q']['network'](prev_state_batch).gather(1, prev_action_batch)
         next_state_values = torch.zeros(self._vf['q']['batch_size'], device=self.device)
         next_state_values[non_final_mask] = self._target_vf['network'](non_final_next_states).max(1)[0].detach()
 
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
         loss = F.mse_loss(state_action_values,
                           expected_state_action_values.unsqueeze(1))
+        self.optimizer.zero_grad()
         loss.backward()
-        # for i, data in enumerate(transition_batch):
-        #     prev_state, prev_action, reward, state, action, _, t, error = data
-        #     self.calculateGradientValueFunction(vf_type, reward, prev_state, prev_action, state, action)
+        self.optimizer.step()
 
-        self.updateNetworkWeights(self._vf[vf_type]['network'], self._vf[vf_type]['step_size'])
+
         self._target_vf['counter'] += 1
 
     def getStateActionValue(self, state, action=None, vf_type='q', gradient=False):
@@ -325,7 +309,7 @@ class BaseDynaAgent(BaseAgent):
         '''
         if gradient:
             self._sr['batch_counter'] += 1
-        observation = torch.from_numpy(observation).unsqueeze(0).to(self.device)
+        observation = torch.tensor([observation], device=self.device)
         if gradient:
             rep = self._sr['network'](observation)
         else:
@@ -442,4 +426,9 @@ class BaseDynaAgent(BaseAgent):
     @abstractmethod
     def initModel(self, state):
         pass
+
+
+
+
+
 

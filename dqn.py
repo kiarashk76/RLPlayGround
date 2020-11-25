@@ -18,12 +18,12 @@ from Colab.Experiments.GridWorldExperiment import GridWorldExperiment
 
 from Colab.Experiments.ExperimentObject import ExperimentObject
 import config
-from Colab.Envs.GridWorldBase import GridWorld
+from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # env = gym.make('CartPole-v1')#.unwrapped
-env = GridWorld(config.four_room_params)
+env = GridWorldRooms(config.n_room_params)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 Transition = namedtuple('Transition',
@@ -188,7 +188,7 @@ num_steps_run_list = np.zeros([num_runs, num_episode], dtype=np.int)
 
 for r in range(num_runs):
     print("starting runtime ", r + 1)
-    env = GridWorld()
+    env = GridWorldRooms(config.n_room_params)
 
     # initializing the agent
     agent = agent()
