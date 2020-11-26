@@ -323,6 +323,10 @@ class RunExperiment():
         num_episode = config.num_episode
         max_step_each_episode = config.max_step_each_episode
         self.num_steps_run_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
+        # ****
+        self.simulation_steps_run_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
+        self.consistency = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
+        # ****
         self.model_error_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
         self.agent_model_error_list = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.float)
         self.model_error_samples = np.zeros([len(experiment_object_list), num_runs, num_episode], dtype=np.int)
@@ -373,9 +377,13 @@ class RunExperiment():
                 for e in range(num_episode):
                     print("starting episode ", e + 1)
                     experiment.runEpisode(max_step_each_episode)
-                    dqn_num_step = self.simulate_dqn(agent.policy, agent.true_model, env.start(), env.getAllActions())
                     self.num_steps_run_list[i, r, e] = experiment.num_steps
-                    print('consistency: ', agent.action_consistency / agent.time_step, "dqn steps:", dqn_num_step)
+
+
+                    if agent.name == 'DQNMCTSAgent':
+                        self.simulation_steps_run_list[i, r, e] = self.simulate_dqn(agent.policy, agent.true_model,
+                                                                                    env.start(), env.getAllActions())
+                        self.consistency[i, r, e] = agent.action_consistency / experiment.num_steps
                     if e % 100 == 0:
                         mean = np.mean(self.num_steps_run_list[0], axis=0)
                         plt.plot(mean[0:e])
@@ -409,6 +417,8 @@ class RunExperiment():
 
         self.show_model_error_plot()
         # self.show_agent_model_error_plot()
+        with open('sim_num_steps_run_list.npy', 'wb') as f:
+            np.save(f, self.simulation_steps_run_list)
         with open('num_steps_run_list.npy', 'wb') as f:
             np.save(f, self.num_steps_run_list)
         with open('model_error_run4.npy', 'wb') as f:

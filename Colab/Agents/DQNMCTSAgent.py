@@ -35,6 +35,7 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
         self.action_consistency = 0
 
     def start(self, observation):
+        self.action_consistency = 0
         BaseDynaAgent.start(self, observation)
         action = BaseMCTSAgent.start(self, observation)
         return action
