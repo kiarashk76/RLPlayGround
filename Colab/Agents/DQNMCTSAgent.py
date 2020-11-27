@@ -64,8 +64,6 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
                 self.updateValueFunction(transition_batch, 's')
 
     def selection(self):
-        time1 = time.time()
-        self.timecounter[2] += 1
         selected_node = self.root_node
         while len(selected_node.get_childs()) > 0:
             max_uct_value = -np.inf
@@ -83,7 +81,6 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
                 if max_uct_value < uct_value:
                     max_uct_value = uct_value
                     selected_node = child
-            self.timelist[2] += time.time() - time1
 
             if self.learn_from_selection:
                 state = selected_node.parent.get_state()

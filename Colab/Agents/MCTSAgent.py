@@ -38,18 +38,13 @@ class BaseMCTSAgent:
         self.rollout_depth = params['simulation_depth']
         self.keep_tree = False
 
-        # self.timelist = [0, 0, 0, 0, 0, 0] #total iterations, one iteration, selection, expansion, rollout, backpropagation
-        # self.timecounter = [0, 0, 0, 0, 0, 0]
     def start(self, observation):
 
         self.root_node = Node(None, observation)
         self.expansion(self.root_node)
 
-        # time1 = time.time()
-        # self.timecounter[0] += 1
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
-        # self.timelist[0] += time.time() - time1
         self.root_node = sub_tree
 
         return a
@@ -58,24 +53,17 @@ class BaseMCTSAgent:
         if not self.keep_tree:
             self.root_node = Node(None, observation)
 
-        # time1 = time.time()
-        # self.timecounter[0] += 1
         for i in range(self.num_iterations):
             a, sub_tree = self.MCTS_iteration()
-        # self.timelist[0] += time.time() - time1
         self.root_node = sub_tree
 
         return a
 
     def end(self, reward):
         pass
-        # for tot, c in zip(self.timelist, self.timecounter):
-        #     print(tot / c, end=" | ")
-        # print("******")
 
     def MCTS_iteration(self):
-        # time1 = time.time()
-        # self.timecounter[1] += 1
+
         # self.render_tree()
         selected_node = self.selection()
         #now we decide to expand the leaf or rollout
@@ -96,12 +84,9 @@ class BaseMCTSAgent:
                 max_visit = child.get_avg_value()
                 max_action = child.get_action_from_par()
                 max_child = child
-        # self.timelist[1] += time.time() - time1
         return max_action, max_child
 
     def selection(self):
-        # time1 = time.time()
-        # self.timecounter[2] += 1
         selected_node = self.root_node
         while len(selected_node.get_childs()) > 0:
             max_uct_value = -np.inf
@@ -121,23 +106,17 @@ class BaseMCTSAgent:
                 if max_uct_value < uct_value:
                     max_uct_value = uct_value
                     selected_node = child
-        # self.timelist[2] += time.time() - time1
         return selected_node
 
     def expansion(self, node):
-        # time1 = time.time()
-        # self.timecounter[3] += 1
         for a in self.action_list:
             next_state, is_terminal, reward = self.true_model(node.get_state(), a) # with the assumption of deterministic model
             if np.array_equal(next_state, node.get_state()):
                 continue
             child = Node(node, next_state, is_terminal=is_terminal, action_from_par=a, reward_from_par = reward)
             node.add_child(child)
-        # self.timelist[3] += time.time() - time1
 
     def rollout(self, node):
-        # time1 = time.time()
-        # self.timecounter[4] += 1
         is_terminal = False
         state = node.get_state()
         sum_returns = 0
@@ -151,12 +130,9 @@ class BaseMCTSAgent:
                 depth += 1
                 state = next_state
             sum_returns += single_return
-        # self.timelist[4] += time.time()- time1
-        return np.average(sum_returns / self.num_rollouts)
+        return sum_returns / self.num_rollouts
 
     def backpropagate(self, node, value):
-        # time1 = time.time()
-        # self.timecounter[5] += 1
 
         while node is not None:
             node.add_to_values(value)
@@ -165,7 +141,6 @@ class BaseMCTSAgent:
             value += node.reward_from_par
             node = node.parent
 
-        # self.timelist[5] += time.time() - time1
 
     def show(self):
         queue = [self.root_node,"*"]
