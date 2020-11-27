@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     # agent_class_list = [UCBMCTSAgent]
     # agent_class_list = [BaseDynaAgent]
-    agent_class_list = [BaseMCTSAgent]
+    agent_class_list = [DQNMCTSAgent]
 
 
 

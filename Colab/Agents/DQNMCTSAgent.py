@@ -70,14 +70,16 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
             child_values = list(map(lambda n: n.get_avg_value(), selected_node.get_childs()))
             max_child_value = max(child_values)
             min_child_value = min(child_values)
-            for child in selected_node.get_childs():
-                if child.num_visits > 0:
-                    child_value = child.get_avg_value()
-                    if min_child_value != np.inf and max_child_value != np.inf and min_child_value != max_child_value:
-                        child_value = (child.get_avg_value() - min_child_value) / (max_child_value - min_child_value)
-                    uct_value = child_value + self.C * ((selected_node.num_visits / child.num_visits)**0.5)
+            for ind, child in enumerate(selected_node.get_childs()):
+                if child.num_visits == 0:
+                    selected_node = child
+                    break
                 else:
-                    uct_value = np.inf
+                    child_value = child_values[ind]
+                    if min_child_value != np.inf and max_child_value != np.inf and min_child_value != max_child_value:
+                        child_value = (child_value - min_child_value) / (max_child_value - min_child_value)
+                    uct_value = child_value + \
+                                self.C * ((selected_node.num_visits / child.num_visits) ** 0.5)
                 if max_uct_value < uct_value:
                     max_uct_value = uct_value
                     selected_node = child
@@ -106,18 +108,20 @@ class DQNMCTSAgent(BaseMCTSAgent, BaseDynaAgent):
     def rollout(self, node):
         is_terminal = False
         state = node.get_state()
-        returns = np.zeros([self.num_rollouts])
+        sum_returns = 0
         for i in range(self.num_rollouts):
             depth = 0
+            single_return = 0
             while not is_terminal and depth < self.rollout_depth:
                 a = random.choice(self.action_list)
                 next_state, is_terminal, reward = self.true_model(state, a)
-                returns[i] += reward
+                single_return += reward
                 depth += 1
                 if self.learn_from_roullout:
                     self.learn_from_transition(state, a, reward, next_state, is_terminal)
                 state = next_state
-        return np.average(returns)
+            sum_returns += single_return
+        return sum_returns / self.num_rollouts
 
     def learn_from_transition(self, state, a, reward, next_state, is_terminal):
         torch_state = self.getStateRepresentation(state)

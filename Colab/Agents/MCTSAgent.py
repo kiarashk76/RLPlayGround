@@ -133,7 +133,6 @@ class BaseMCTSAgent:
         return sum_returns / self.num_rollouts
 
     def backpropagate(self, node, value):
-
         while node is not None:
             node.add_to_values(value)
             node.inc_visits()
