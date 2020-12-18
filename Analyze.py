@@ -2,21 +2,153 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Colab.utils as utils, Colab.config as config
 
-with open("num_steps_run_list.npy", 'rb') as f:
-    num_steps = np.load(f)
-print(num_steps.shape)
+with open("Colab/Logs/num_steps_run_list_MCTS.npy", 'rb') as f:
+    num_steps_mcts = np.load(f)
+with open("Colab/Logs/num_steps_run_list_DQN.npy", 'rb') as f:
+    num_steps_dqn = np.load(f)
+with open("Colab/Logs/num_steps_run_list_random.npy", 'rb') as f:
+    num_steps_random = np.load(f)
 
-mean_num_steps = np.mean(num_steps, axis=1)
-var_num_steps = np.std(num_steps, axis=1)
-print(mean_num_steps.shape, var_num_steps.shape)
+print(num_steps_mcts.shape)
+print(num_steps_dqn.shape)
+
+mean_num_steps_dqn = np.mean(num_steps_dqn, axis=1)
+var_num_steps_dqn = np.std(num_steps_dqn, axis=1)
+mean_num_steps_mcts = np.mean(num_steps_mcts, axis=1)
+var_num_steps_mcts = np.std(num_steps_mcts, axis=1)
+mean_num_steps_random = np.mean(num_steps_random, axis=1)
+var_num_steps_random = np.std(num_steps_random, axis=1)
 
 ind = 0
-plt.plot(mean_num_steps[ind],'r', label='single model')
-plt.fill_between(range(len(mean_num_steps[ind])),
-                 mean_num_steps[ind] - var_num_steps[ind],
-                 mean_num_steps[ind] + var_num_steps[ind],
+plt.plot(mean_num_steps_dqn[ind],'r', label='dqn')
+plt.fill_between(range(len(mean_num_steps_dqn[ind])),
+                 mean_num_steps_dqn[ind] - var_num_steps_dqn[ind],
+                 mean_num_steps_dqn[ind] + var_num_steps_dqn[ind],
                  facecolor='red', alpha=0.2, edgecolor='none')
+
+plt.plot(mean_num_steps_mcts[ind],'g', label='mcts')
+plt.fill_between(range(len(mean_num_steps_mcts[ind])),
+                 mean_num_steps_mcts[ind] - var_num_steps_mcts[ind],
+                 mean_num_steps_mcts[ind] + var_num_steps_mcts[ind],
+                 facecolor='green', alpha=0.2, edgecolor='none')
+
+plt.plot(mean_num_steps_random[ind],'b', label='random')
+plt.fill_between(range(len(mean_num_steps_random[ind])),
+                 mean_num_steps_random[ind] - var_num_steps_random[ind],
+                 mean_num_steps_random[ind] + var_num_steps_random[ind],
+                 facecolor='blue', alpha=0.2, edgecolor='none')
+plt.legend()
 plt.show()
+
+
+
+
+with open("Colab/Logs/num_steps_run_list_DQNMCTS.npy", 'rb') as f:
+    num_steps_mcts = np.load(f)
+with open("Colab/Logs/sim_num_steps_run_list.npy", 'rb') as f:
+    num_steps_dqn = np.load(f)
+with open("Colab/Logs/consistency_num_steps_run_list.npy", 'rb') as f:
+    consistency = np.load(f)
+
+
+with open("Colab/Logs/num_steps_run_list_DQNMCTS2.npy", 'rb') as f:
+    num_steps_mcts2 = np.load(f)
+with open("Colab/Logs/sim_num_steps_run_list2.npy", 'rb') as f:
+    num_steps_dqn2 = np.load(f)
+with open("Colab/Logs/consistency_num_steps_run_list2.npy", 'rb') as f:
+    consistency2 = np.load(f)
+print(num_steps_mcts.shape)
+print(num_steps_dqn.shape)
+
+mean_num_steps_dqn = np.mean(num_steps_dqn, axis=1)
+var_num_steps_dqn = np.std(num_steps_dqn, axis=1)
+mean_num_steps_mcts = np.mean(num_steps_mcts, axis=1)
+var_num_steps_mcts = np.std(num_steps_mcts, axis=1)
+mean_num_steps_consistency = np.mean(consistency, axis=1)
+var_num_steps_consistency = np.std(consistency, axis=1)
+
+mean_num_steps_dqn2 = np.mean(num_steps_dqn2, axis=1)
+var_num_steps_dqn2 = np.std(num_steps_dqn2, axis=1)
+mean_num_steps_mcts2 = np.mean(num_steps_mcts2, axis=1)
+var_num_steps_mcts2 = np.std(num_steps_mcts2, axis=1)
+mean_num_steps_consistency2 = np.mean(consistency2, axis=1)
+var_num_steps_consistency2 = np.std(consistency2, axis=1)
+ind = 0
+fig, axs = plt.subplots(2,2)
+
+axs[0,0].title.set_text('DQN train with MCTS expansion')
+axs[0,0].plot(mean_num_steps_dqn[ind],'r', label='dqn')
+axs[0,0].fill_between(range(len(mean_num_steps_dqn[ind])),
+                 mean_num_steps_dqn[ind] - var_num_steps_dqn[ind],
+                 mean_num_steps_dqn[ind] + var_num_steps_dqn[ind],
+                 facecolor='red', alpha=0.2, edgecolor='none')
+
+axs[0,0].plot(mean_num_steps_mcts[ind],'g', label='mcts')
+axs[0,0].fill_between(range(len(mean_num_steps_mcts[ind])),
+                 mean_num_steps_mcts[ind] - var_num_steps_mcts[ind],
+                 mean_num_steps_mcts[ind] + var_num_steps_mcts[ind],
+                 facecolor='green', alpha=0.2, edgecolor='none')
+
+axs[1,0].plot(mean_num_steps_consistency[ind],'b', label='consistency')
+axs[1,0].fill_between(range(len(mean_num_steps_consistency[ind])),
+                 mean_num_steps_consistency[ind] - var_num_steps_consistency[ind],
+                 mean_num_steps_consistency[ind] + var_num_steps_consistency[ind],
+                 facecolor='blue', alpha=0.2, edgecolor='none')
+
+axs[0,1].title.set_text('DQN train with MCTS selection path')
+axs[0,1].plot(mean_num_steps_dqn2[ind],'r', label='dqn')
+axs[0,1].fill_between(range(len(mean_num_steps_dqn2[ind])),
+                 mean_num_steps_dqn2[ind] - var_num_steps_dqn2[ind],
+                 mean_num_steps_dqn2[ind] + var_num_steps_dqn2[ind],
+                 facecolor='red', alpha=0.2, edgecolor='none')
+
+axs[0,1].plot(mean_num_steps_mcts2[ind],'g', label='mcts')
+axs[0,1].fill_between(range(len(mean_num_steps_mcts2[ind])),
+                 mean_num_steps_mcts2[ind] - var_num_steps_mcts2[ind],
+                 mean_num_steps_mcts2[ind] + var_num_steps_mcts2[ind],
+                 facecolor='green', alpha=0.2, edgecolor='none')
+
+axs[1,1].plot(mean_num_steps_consistency2[ind],'b', label='consistency')
+axs[1,1].fill_between(range(len(mean_num_steps_consistency2[ind])),
+                 mean_num_steps_consistency2[ind] - var_num_steps_consistency2[ind],
+                 mean_num_steps_consistency2[ind] + var_num_steps_consistency2[ind],
+                 facecolor='blue', alpha=0.2, edgecolor='none')
+axs[0,0].legend()
+axs[0,1].legend()
+axs[1,0].legend()
+axs[1,1].legend()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 exit(0)
 with open('multi.npy', 'rb') as f:
     err_multi = np.load(f)

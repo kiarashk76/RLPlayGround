@@ -1,8 +1,6 @@
-
-import collections
 import numpy as np
-import pygame
 import random
+import pygame
 
 class GridWorld():
     def __init__(self, params=None):
@@ -511,7 +509,6 @@ class GridWorld():
 
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
-
 
 
 

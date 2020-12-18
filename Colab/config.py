@@ -7,7 +7,7 @@ from Colab.Envs.GridWorldRooms import GridWorldRooms
 
 # # experiment
 num_runs = 5
-num_episode = 500
+num_episode = 1000
 max_step_each_episode = 50
 
 # # environment
@@ -30,7 +30,7 @@ n_room_params = \
     {'init_state': 'random' , 'state_mode': 'coord', #init_state (_n-1, 0)
     'house_shape': (2,2), 'rooms_shape': (3,3),
     'obstacles_pos': [],
-    'rewards_value': [100],
+    'rewards_value': [1],
     'termination_probs': [1],
     'actions': [(0, -1), (-1, 0), (0, 1) , (1, 0)], # L, U, R, D
     'neighbour_distance': 0,
